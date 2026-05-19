@@ -1,0 +1,345 @@
+#include "processos.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <float.h>
+#include "interface.h"
+
+// Lista de apelidos que representam números inteiros
+// Ao invés de usar números soltos, usa-se nomes descritivos para cada política de escalonamento, facilitando a leitura e manutenção do código
+typedef enum{
+    // politica está sendo usado com a finalidade de representar os escalonamentos.
+    POLITICA_ALTERNANCIA, // = 0
+    POLITICA_PRIORIDADE, // = 1
+    POLITICA_LOTERIA, // = 2
+    POLITICA_CFS // = 3
+} Politica;
+
+// Garantindo que nenhum processo tenha prioridade zero ou inferior, para evitar divisão por zero no CFS
+static int prioridade_efetiva(const Processo *p) {
+    if (p->prioridade > 0) {
+        return p->prioridade;
+    } else {
+        return 1;
+    }
+}
+
+// Função para imprimir no terminal o estado atual da CPU no tempo atual(t)
+/*static void imprimir_execucao(int tempo, int indice, const Processo processos[]) {
+    if (indice >= 0) {
+        // Se há um processo válido (índice >= 0), mostra quem está rodando
+        printf("t=%d | CPU=P%s | restante=%d\n",
+               tempo, processos[indice].pid, processos[indice].tempo_restante);
+    } else {
+        // Caso não haja processo em execução (índice < 0) não há processos prontos para rodar, então a CPU fica ociosa
+        printf("t=%d | CPU=IDLE\n", tempo);
+    }
+}*/
+
+// Função para imprimir o relatório final com os tempos de criação, conclusão, turnaround e tempo em estado pronto
+/*static void imprimir_relatorio_final(const Processo processos[], int n) {
+    int i;
+
+    printf("\nResumo final:\n");
+    printf("PID\tCriacao\tConclusao\tTurnaround\tTempoPronto\n");
+
+    // Imprime os detalhes de cada processo
+    for (i = 0; i < n; i++) {
+        // O tempo de turnaround é calculado como o tempo de conclusão menos o tempo de criação,
+        // representando o tempo total que o processo levou para ser concluído desde sua criação
+        int turnaround = processos[i].tempo_conclusao - processos[i].tempo_criacao;
+        printf("P%s\t%d\t%d\t\t%d\t\t%d\n",
+               processos[i].pid,
+               processos[i].tempo_criacao,
+               processos[i].tempo_conclusao,
+               turnaround,
+               processos[i].tempo_espera);
+    }
+}*/
+
+/////ALGORITMOS DE ESCALONAMENTO/////
+
+// Função para escolher um processo usando o algoritmo de prioridade
+// Varre os processos prontos e escolhe o que tiver o MAIOR número de prioridade.
+static int escolher_por_prioridade(const Processo processos[], const int pronto[], int n) {
+    int i;
+    int escolhido = -1;
+
+    for (i = 0; i < n; i++) {
+        if (!pronto[i]) { // Se o processo não está pronto, ele é ignorado
+            continue;
+        }
+        // Se for o primeiro processo pronto encontrado ou se tiver prioridade maior que o escolhido atual, ele se torna o novo escolhido
+        if (escolhido < 0 || processos[i].prioridade > processos[escolhido].prioridade) {
+            escolhido = i;
+        }
+    }
+    return escolhido;
+}
+
+// Função para escolher um processo usando o algoritmo de loteria
+// Sorteia um "bilhete" e percorre a lista até encontrar o processo dono daquele bilhete.
+static int escolher_por_loteria(const Processo processos[], const int pronto[], int n) {
+    int i;
+    int total_bilhetes = 0;
+    int acumulado = 0;
+    int sorteio;
+
+    // 1. Somar todos os bilhetes dos processos que estão prontos
+    for (i = 0; i < n; i++) {
+        if (pronto[i]) {
+            total_bilhetes += prioridade_efetiva(&processos[i]);
+        }
+    }
+
+    if (total_bilhetes <= 0) {
+        return -1;
+    }
+
+    //2. Gerar um número aleatório entre 1 e total_bilhetes
+    sorteio = (rand() % total_bilhetes) + 1;
+
+    //3. Percorrer os processos prontos acumulando seus bilhetes até que o sorteio seja menor
+    // ou igual ao acumulado, indicando que o processo atual é o escolhido
+    for (i = 0; i < n; i++) {
+        if (!pronto[i]) {
+            continue;
+        }
+        acumulado += prioridade_efetiva(&processos[i]);
+        if (sorteio <= acumulado) {
+            return i;// Processo atual segura o bilhete sorteado, então ele é escolhido para execução
+        }
+    }
+
+    return -1;
+}
+
+// Função para escolher um processo usando o algoritmo CFS (Completely Fair Scheduler)
+// CFS: Escolhe o processo que teve o MENOR tempo virtual de execução (vruntime).
+static int escolher_por_cfs(const Processo processos[], const int pronto[], int n) {
+    int i;
+    int escolhido = -1;
+    // Inicializa com o maior valor possível para garantir que
+    // qualquer processo pronto terá um vruntime menor, permitindo que seja escolhido corretamente.
+    float menor_vruntime = FLT_MAX; 
+
+    // Varre os processos prontos e escolhe o que tiver o menor vruntime, 
+    //garantindo uma distribuição justa do tempo de CPU entre os processos,
+    // onde processos que tiveram menos tempo de CPU tendem a ser escolhidos mais frequentemente
+    for (i = 0; i < n; i++) {
+        if (!pronto[i]) {
+            continue;
+        }
+        if (escolhido < 0 || processos[i].vruntime < menor_vruntime) {
+            escolhido = i;
+            menor_vruntime = processos[i].vruntime;
+        }
+    }
+    return escolhido;
+}
+
+//// INFRAESTRUTURA DE SIMULAÇÃO ////
+// Funções para manipular a fila de processos no algoritmo de alternância (Round Robin)
+// Remove o primeiro processo da fila para ele ir para a CPU
+static int pop_fila_rr(int fila[], int *inicio, int *tamanho) {
+    int indice = fila[*inicio];
+    // O '%' garante que o índice volte a 0 ao chegar no final do array
+    *inicio = (*inicio + 1) % MAX_PROCESSOS;
+    (*tamanho)--;
+    return indice;
+}
+
+// Função para adicionar um processo à fila de alternância, garantindo que ele não seja adicionado mais de uma vez
+// Adiciona um processo ao final da fila
+static void push_fila_rr(int fila[], int *fim, int *tamanho, int em_fila[], int indice) {
+    if (indice < 0 || em_fila[indice] || *tamanho >= MAX_PROCESSOS) {
+        return;
+    }
+    fila[*fim] = indice;
+    *fim = (*fim + 1) % MAX_PROCESSOS;
+    (*tamanho)++;
+    // Marca que o processo já está na fila para evitar duplicatas
+    em_fila[indice] = 1;
+}
+
+//// FUNÇÃO DE SIMULAÇÃO PRINCIPAL ////
+// Função principal para simular o escalonamento de processos com base na política escolhida
+// Esta função gerencia a passagem do tempo e chama o algoritmo correto para escolher o 
+// próximo processo a ser executado, além de atualizar os tempos de espera e conclusão dos processos
+static void simular(Processo processos[], int n, int quantum, Politica politica) {
+    int i;
+    int tempo = 0;
+    int concluidos = 0;
+    int em_execucao = -1; // -1 = CPU ociosa, ou seja, sem processos em execução
+    int quantum_usado = 0;
+
+    // Vetor de booleanos para indicar quais 
+    //processos estão prontos para execução para Loteria, Prioridade e CFS
+    int pronto[MAX_PROCESSOS] = {0};
+
+    // Variáveis de controle para a fila de processos no algoritmo de alternância (Round Robin)
+    int fila_rr[MAX_PROCESSOS] = {0};
+    int rr_inicio = 0;
+    int rr_fim = 0;
+    int rr_tamanho = 0;
+    int em_fila_rr[MAX_PROCESSOS] = {0};
+
+    // Garantir que o quantum seja positivo para evitar loops infinitos
+    if (quantum <= 0) {
+        quantum = 1;
+    }
+
+    // Inicializar os processos com seus tempos restantes, tempos de espera e conclusão
+    // Resetando o tempo restante para o tempo total de execução, o tempo de espera para 0,
+    // o tempo de conclusão para -1 (indicando que ainda não foi concluído) e o vruntime para 0.0f (usado no CFS)
+    for (i = 0; i < n; i++) {
+        processos[i].tempo_restante = processos[i].tempo_execucao_total;
+        processos[i].tempo_espera = 0;
+        processos[i].tempo_conclusao = -1;
+        processos[i].na_cpu = 0;
+        processos[i].vruntime = 0.0f;
+    }
+
+    // Loop principal de simulação, que continua até que todos os processos sejam concluídos
+    // Relógio do SO, cada loop é uma unidade de tempo, e a cada unidade de tempo o sistema verifica se há novos processos criados,
+    // se o processo em execução terminou ou esgotou seu quantum, e atualiza os tempos de espera dos processos prontos,
+    //além de imprimir o estado atual da CPU e, ao final, um relatório com os tempos de criação, conclusão,
+    // turnaround e tempo em estado pronto de cada processo
+    while (concluidos < n) {
+        // 1. Verificar chegadas. Alguém "nasceu" neste exato 'tempo'?
+        for (i = 0; i < n; i++) {
+            if (processos[i].tempo_criacao == tempo && processos[i].tempo_restante > 0) {
+                if (politica == POLITICA_ALTERNANCIA) {
+                    // Botando no final da fila de alternância, garantindo que ele seja considerado para execução na próxima escolha de processo
+                    push_fila_rr(fila_rr, &rr_fim, &rr_tamanho, em_fila_rr, i);
+                } else {
+                    // Fica disponível para os outros algoritmos, marcando como pronto para que eles possam ser escolhidos na próxima escolha de processo
+                    pronto[i] = 1;
+                }
+            }
+        }
+        
+        // 2. Se a CPU está livre, vamos escolher alguém.
+        // Se não há processo em execução, escolher um novo processo com base na política de escalonamento
+        if (em_execucao < 0) {
+            if (politica == POLITICA_ALTERNANCIA) {
+                if (rr_tamanho > 0) {
+                    em_execucao = pop_fila_rr(fila_rr, &rr_inicio, &rr_tamanho);
+                    // Saiu da fila, vai para a CPU
+                    em_fila_rr[em_execucao] = 0;
+                }
+            } else if (politica == POLITICA_PRIORIDADE) {
+                em_execucao = escolher_por_prioridade(processos, pronto, n);
+                if (em_execucao >= 0) pronto[em_execucao] = 0;
+            } else if (politica == POLITICA_LOTERIA) {
+                em_execucao = escolher_por_loteria(processos, pronto, n);
+                if (em_execucao >= 0) pronto[em_execucao] = 0;
+            } else {
+                em_execucao = escolher_por_cfs(processos, pronto, n);
+                if (em_execucao >= 0) pronto[em_execucao] = 0;
+            }
+            quantum_usado = 0;
+        }
+
+        // 3. Se mesmo após o escalonamento ninguém foi escolhido (nenhum processo chegou ainda).
+        // Se há um processo em execução, processá-lo por um ciclo de tempo
+        if (em_execucao < 0) {
+            //imprime IDLE, indicando que a CPU está ociosa, e avança o tempo para a próxima unidade de tempo, onde pode haver novos processos chegando ou prontos para execução
+            
+            animar_execucao(tempo, -1, processos, n);
+            //imprimir_execucao(tempo, -1, processos);
+            tempo++;
+            continue;// Avança o relógio e pula para o próximo ciclo
+        }
+
+        // 4. Execução na CPU (Trabalho sendo feito)
+        // Marca que o processo está na CPU para controle de estado, e imprime o estado atual da CPU, mostrando qual processo está rodando e quanto tempo restante ele tem
+        processos[em_execucao].na_cpu = 1;
+        animar_execucao(tempo, em_execucao, processos, n);
+        //imprimir_execucao(tempo, em_execucao, processos);
+
+        // Fez 1 segundo de trabalho, então diminui o tempo restante do processo em execução e incrementa o quantum usado
+        processos[em_execucao].tempo_restante--;
+        // Usou 1 segundo da fatia de tempo, então incrementa o quantum usado para controle de quando o processo deve ser preemptado (no case do Round Robin) ou para atualizar o vruntime no CFS
+        quantum_usado++;
+
+        // Matemática do CFS: Processos com maior prioridade ganham menos vruntime, logo voltam pra CPU mais rápido.
+        // No algoritmo CFS, o vruntime é atualizado com base na prioridade efetiva do processo
+        if (politica == POLITICA_CFS) {
+            processos[em_execucao].vruntime += 1.0f / prioridade_efetiva(&processos[em_execucao]);
+        }
+
+        //5. Atualizar o tempo de espera dos processos prontos, garantindo que apenas os processos 
+        //que estão prontos e não em execução tenham seu tempo de espera incrementado, para refletir o tempo que eles passaram esperando na fila para serem executados
+        // Incrementar o tempo de espera dos processos que estão prontos, mas não em execução
+        for (i = 0; i < n; i++) {
+            // Se for o processo atual, se já terminou ou se ainda não nasceu, ignora.
+            if (i == em_execucao || processos[i].tempo_restante <= 0 || processos[i].tempo_criacao > tempo) {
+                continue;
+            }
+
+            if (politica == POLITICA_ALTERNANCIA) {
+                if (em_fila_rr[i]) {
+                    processos[i].tempo_espera++;
+                }
+            } else {
+                if (pronto[i]) {
+                    processos[i].tempo_espera++;
+                }
+            }
+        }
+
+        //6. Condições de saída da CPU: Verificar se o processo em execução foi concluído ou se o quantum foi esgotado, para decidir se ele deve ser removido da CPU e, no caso do Round Robin, colocado de volta na fila para esperar sua próxima vez de execução
+        // Verificar se o processo em execução foi concluído ou se o quantum foi esgotado
+        if (processos[em_execucao].tempo_restante == 0) {
+            // O processo terminou sua execução, então registra o tempo de conclusão, marca que ele não está mais na CPU, e incrementa o contador de processos concluídos
+            processos[em_execucao].tempo_conclusao = tempo + 1;
+            processos[em_execucao].na_cpu = 0;
+            // Libera a CPU, permitindo que um novo processo seja escolhido no próximo ciclo de simulação
+            em_execucao = -1;
+            quantum_usado = 0;
+            concluidos++;
+        } else if (quantum_usado >= quantum) {
+            // O processo não terminou, mas atingiu a sua fatia de tempo máxima, então ele deve ser preemptado e colocado de volta na fila (no caso do Round Robin) ou marcado como pronto para os outros algoritmos, para que possa ser escolhido novamente no futuro
+            processos[em_execucao].na_cpu = 0;
+
+            if (politica == POLITICA_ALTERNANCIA) {
+                push_fila_rr(fila_rr, &rr_fim, &rr_tamanho, em_fila_rr, em_execucao);
+            } else {
+                // Volta para o estado pronto, permitindo que ele seja escolhido novamente pelos algoritmos de Prioridade, Loteria ou CFS, e marcando como pronto para que eles possam ser considerados na próxima escolha de processo
+                pronto[em_execucao] = 1;
+            }
+
+            // Libera a CPU
+            em_execucao = -1;
+            quantum_usado = 0;
+        }
+        // O ciclo termina, então avança o tempo para a próxima unidade de tempo, onde pode haver novos processos chegando ou prontos para execução, e o processo em execução pode continuar ou ser preemptado dependendo do algoritmo de escalonamento e do quantum
+        tempo++;
+    }
+
+    // Simulação terminou, então imprime o relatório final com os tempos de criação, conclusão, turnaround e tempo em estado pronto de cada processo, para que o usuário possa analisar o desempenho do algoritmo de escalonamento escolhido
+    //imprimir_relatorio_final(processos, n);
+    imprimir_relatorio_colorido(processos, n);
+}
+
+//// FUNÇÕES DE INTERFACE PARA CADA ALGORITMO DE ESCALONAMENTO ////
+// Funções para iniciar a simulação de cada algoritmo de escalonamento, imprimindo o nome do algoritmo e chamando a função de simulação com a política correspondente
+void escalonar_alternancia(Processo processos[], int n, int quantum) {
+    printf("=== Escalonamento: Alternancia Circular (Round Robin) ===\n");
+    simular(processos, n, quantum, POLITICA_ALTERNANCIA);
+}
+
+void escalonar_prioridade(Processo processos[], int n, int quantum) {
+    printf("=== Escalonamento: Prioridade ===\n");
+    simular(processos, n, quantum, POLITICA_PRIORIDADE);
+}
+
+void escalonar_loteria(Processo processos[], int n, int quantum) {
+    printf("=== Escalonamento: Loteria ===\n");
+    simular(processos, n, quantum, POLITICA_LOTERIA);
+}
+
+void escalonar_cfs(Processo processos[], int n, int quantum) {
+    printf("=== Escalonamento: CFS ===\n");
+    simular(processos, n, quantum, POLITICA_CFS);
+}

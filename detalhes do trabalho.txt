@@ -1,0 +1,24 @@
+O Process Control Block (PCB), ou Bloco de Controle de Processo,
+ é uma estrutura de dados fundamental no núcleo (kernel) 
+ do sistema operacional, utilizada para armazenar todos 
+ os metadados necessários para gerenciar um processo 
+ específico. Em C, ele é geralmente implementado como 
+ uma struct que contém informações como PID, estado, 
+ registradores e prioridade.
+
+ Identificação (PID): Um número único para identificar o processo.
+ Estado do Processo: Se está rodando, pronto, bloqueado, etc..
+ Contexto de Execução (Registradores): 
+ Program counter (próxima instrução), ponteiros de pilha e 
+ outros registradores da CPU, fundamentais para salvar e 
+ restaurar o processo.
+ Informações de Gerenciamento: Prioridade, memória alocada,
+ arquivos abertos e tempo de CPU utilizado.
+
+ struct PCB {
+    int pid;                // ID do Processo
+    int estado;             // Estado do Processo
+    int program_counter;    // PC - Próxima instrução
+    int registradores[8];   // Registradores da CPU
+    // ... outras informações de gerenciamento
+};
