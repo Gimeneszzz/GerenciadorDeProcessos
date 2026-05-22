@@ -1,24 +1,91 @@
-O Process Control Block (PCB), ou Bloco de Controle de Processo,
- é uma estrutura de dados fundamental no núcleo (kernel) 
- do sistema operacional, utilizada para armazenar todos 
- os metadados necessários para gerenciar um processo 
- específico. Em C, ele é geralmente implementado como 
- uma struct que contém informações como PID, estado, 
- registradores e prioridade.
+Declaração de Uso de IA Generativa
 
- Identificação (PID): Um número único para identificar o processo.
- Estado do Processo: Se está rodando, pronto, bloqueado, etc..
- Contexto de Execução (Registradores): 
- Program counter (próxima instrução), ponteiros de pilha e 
- outros registradores da CPU, fundamentais para salvar e 
- restaurar o processo.
- Informações de Gerenciamento: Prioridade, memória alocada,
- arquivos abertos e tempo de CPU utilizado.
+Declaramos que ferramentas de Inteligência Artificial Generativa (Gemini)
+foram utilizadas como suporte técnico e arquitetural durante o desenvolvimento
+deste simulador de escalonamento. A IA atuou como uma ferramenta de
+pair-programming, acelerando o desenvolvimento e garantindo a aplicação de 
+boas práticas de engenharia de software, sob a supervisão e validação constante
+dos membros do grupo.O uso da IA foi concentrado em três frentes principais:
 
- struct PCB {
-    int pid;                // ID do Processo
-    int estado;             // Estado do Processo
-    int program_counter;    // PC - Próxima instrução
-    int registradores[8];   // Registradores da CPU
-    // ... outras informações de gerenciamento
-};
+   1. Integração de Estruturas de Dados Complexas (rbtree.h):
+    Para atender à recomendação de utilizar soluções consolidadas para algoritmos
+    avançados, utilizamos a IA para gerar a implementação de uma Árvore Rubro-Negra
+    (Red-Black Tree) em C puro. Em vez de importar uma biblioteca genérica pesada, 
+    a IA sintetizou o arquivo rbtree.h contendo apenas a lógica matemática essencial
+    baseada na literatura clássica. Isso nos permitiu atingir a eficiência de tempo 
+    O(\log N) exigida pelo algoritmo CFS (Completely Fair Scheduler) de forma limpa,
+    modular e sem dependências externas desnecessárias.
+
+    PROMPT USADO:
+    "Eu preciso de uma implementação de uma Árvore Rubro-Negra (Red-Black Tree) em C puro,
+    em um único arquivo de cabeçalho (rbtree.h). A árvore não deve usar ponteiros genéricos
+    (void *). A struct Node deve ser customizada para o meu projeto, contendo apenas um 
+    int proc_idx e um float vruntime. Preciso das funções de inserção balanceada e uma 
+    função para extrair o nó com o menor vruntime. O código deve ser otimizado, seguro contra 
+    memory leaks e comentado de forma didática."
+
+    RESPOSTA GERADA:
+    "Excelente abordagem! Construir uma Árvore Rubro-Negra (Red-Black Tree) sob medida em C puro 
+    garante a complexidade O(\log N) exigida pelo CFS sem a sobrecarga de bibliotecas genéricas.
+    Para atender aos seus requisitos, criei a struct Node especificamente com proc_idx (para mapear o array original)
+    e vruntime (a chave de ordenação, onde o menor valor vai sempre para a esquerda).
+    O código abaixo implementa as rotações à esquerda e à direita, além do balanceamento de cores
+    (regras de inserção) baseadas no algoritmo CLRS. O código é independente, não usa ponteiros genéricos (void*)
+    e inclui uma função libertar_rbtree para garantir a limpeza da memória alocada dinamicamente,
+    evitando memory leaks ao fim da simulação."
+
+    
+   2. Design de Interface e Experiência do Usuário (UI/UX):
+    Com o objetivo de tornar a simulação mais intuitiva,
+    visual e didática para quem está operando o sistema, utilizamos a IA para desenhar
+    a interface gráfica via terminal (CLI). A IA forneceu a lógica multiplataforma
+    (<windows.h> e <unistd.h>) e os códigos de escape ANSI necessários para criar animações,
+    pausas temporais e formatação com cores. Isso transformou uma saída de dados estática em
+    um painel dinâmico e amigável, facilitando a visualização em tempo real do comportamento
+    da CPU e das filas de prontos.
+    
+    PROMPT USADO:
+    "Estou construindo um simulador de escalonamento de CPU no terminal em C. Quero transformar 
+    a saída de texto padrão em uma interface gráfica dinâmica e colorida. Escreva funções usando 
+    códigos de escape ANSI para colorir o texto (ex: verde para concluído, vermelho para na CPU).
+    Além disso, crie uma função multiplataforma (que funcione via <windows.h> no Windows e
+    <unistd.h> no Linux) para dar pequenas pausas (sleep/usleep) a cada ciclo de tempo (t), para que
+    o terminal seja atualizado como uma animação em tempo real. O design deve ser limpo e profissional."
+
+    RESPOSTA GERADA:
+    "Com certeza! Transformar uma saída estática em uma animação no terminal é uma excelente forma de
+    melhorar a Experiência do Usuário (UX) no seu simulador. Para isso, não precisaremos de bibliotecas
+    gráficas pesadas, usaremos os padrões do próprio terminal.
+    Cores: Defini constantes com Códigos de Escape ANSI (ex: \x1b[32m para verde). O terminal interpreta
+    isso e colore o texto a partir daquele ponto. Lembre-se sempre de usar o RESET (\x1b[0m) para voltar à cor original.
+    Tempo (Animação): Criei uma diretiva de pré-processador (#ifdef _WIN32) que compila a função Sleep()
+    se o professor rodar no Windows, ou a usleep() da <unistd.h> se rodar no Linux.
+    Isso torna seu código 100% multiplataforma. Juntando isso com o comando system("clear"), a tela limpará e
+    imprimirá os dados a cada ciclo, criando a ilusão de movimento do relógio." 
+
+   3. Revisão de Código, Lógica e Quality Assurance (QA):
+    A IA foi fundamental como ferramenta de revisão (Code Review). Ela auxiliou na auditoria da
+    lógica de alocação de memória e na transição de algoritmos de busca linear O(N) para
+    estruturas de Fila de Prioridade (Max-Heap). Além disso, o suporte da IA foi crucial na
+    etapa de depuração (debugging), ajudando a identificar e corrigir rapidamente violações
+    de acesso à memória (Segmentation Fault) durante o balanceamento da árvore rubro-negra,
+    garantindo a total estabilidade do executável final.
+
+    PROMPT USADO:
+    "Estou recebendo um erro de 'Segmentation fault (core dumped)' no meu simulador em C escrito para Linux (WSL).
+    O erro acontece no algoritmo CFS na hora de extrair processos da minha Árvore Rubro-Negra durante o tempo t=1.
+    A árvore insere perfeitamente, mas falha na hora de re-inserir após uma extração onde a raiz original era preta
+    e o filho era vermelho. Abaixo está a minha função extrair_menor_rbtree e a minha função corrigir_insercao_rb.
+    Por favor, encontre o erro de manipulação de ponteiros ou regra de cores que está causando o vazamento de memória
+    e forneça a correção exata."
+
+    RESPOSTA GERADA:
+    "Ótima captura no seu processo de depuração! Analisando o erro de Segmentation Fault e o comportamento do seu core dump,
+    identifiquei um clássico caso de borda (edge case) nas propriedades da Árvore Rubro-Negra.
+    O problema ocorre na sua função extrair_menor_rbtree. A regra fundamental da Red-Black Tree é que a raiz
+    deve ser sempre PRETA. No tempo t=1, quando o nó menor (a raiz preta original) é extraído, o nó filho (que é vermelho)
+    sobe para ocupar o topo. Porém, a função atual não o repinta de preto. Na próxima vez que o sistema tenta inserir um nó,
+    ele vê que o 'pai' (a nova raiz vermelha) precisa de balanceamento e tenta acessar o ponteiro do 'avô'.
+    Como a raiz não tem pai (NULL), o sistema tenta ler a memória de um ponteiro nulo, causando a falha de segmentação.
+    A Solução: Adicionei três linhas ao final da sua função de extração garantindo que se (*raiz != NULL) { (*raiz)->cor = PRETO; }.
+    Isso blinda a estrutura e resolve definitivamente o erro de memória."
