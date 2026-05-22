@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <float.h>
 #include "interface.h"
+#include "rbtree.h"
 
 // Lista de apelidos que representam números inteiros
 // Ao invés de usar números soltos, usa-se nomes descritivos para cada política de escalonamento, facilitando a leitura e manutenção do código
@@ -57,7 +58,73 @@ static int prioridade_efetiva(const Processo *p) {
 }*/
 
 /////ALGORITMOS DE ESCALONAMENTO/////
+//Funções auxiliar para organizar a fila por prioridade, deixando O(log N).
+static void trocar_indices(int *a, int *b) {
+    int temp = *a; //ponteiro para o valor de a, guardando ele temporariamente
+    *a = *b; //ponteiro para o valor de a recebe o valor de b, ou seja, a e b trocam de lugar
+    *b = temp; //ponteiro para o valor de b recebe o valor temporário, que é o valor original de a, completando a troca
+}
 
+//Função auxiliar para fazer o processo subir na árvore do array até a posição correta,
+// garantindo que a propriedade de heap seja mantida, ou seja, 
+//que o processo com maior prioridade esteja sempre no topo da árvore, 
+//permitindo que a escolha do próximo processo a ser executado seja feita em O(1) e a inserção e remoção sejam feitas em O(log N)
+static void subir_max_heap(int heap[], int i, const Processo processos[]) {
+    while (i > 0) {
+        int pai = (i - 1) / 2; // Índice do pai na árvore binária representada por array
+        if (prioridade_efetiva(&processos[heap[i]]) > prioridade_efetiva(&processos[heap[pai]])) {
+            trocar_indices(&heap[i], &heap[pai]); // Troca o processo atual com seu pai se tiver prioridade maior
+            i = pai; // Move para o índice do pai para continuar subindo na árvore
+        } else {
+            break; // Se a prioridade do processo atual não for maior que a do pai, a propriedade de heap está satisfeita e o loop pode ser interrompido
+        }
+    }
+}
+
+
+//Função auxiliar para fazer o processo descer na árvore do array até a posição correta,
+//garantindo que a propriedade de heap seja mantida, ou seja, que o processo com maior 
+//prioridade esteja sempre no topo da árvore.
+static void descer_max_heap(int heap[], int i, int tamanho, const Processo processos[]) {
+    while (2 * i + 1 < tamanho) { // Enquanto houver pelo menos um filho
+        int filho_esquerdo = 2 * i + 1; // Índice do filho esquerdo
+        int filho_direito = 2 * i + 2; // Índice do filho direito
+        int maior = i; // Assume que o processo atual é o maior
+
+        if (filho_esquerdo < tamanho && prioridade_efetiva(&processos[heap[filho_esquerdo]]) > prioridade_efetiva(&processos[heap[maior]])) {
+            maior = filho_esquerdo; // O filho esquerdo tem prioridade maior que o processo atual
+        }
+        if (filho_direito < tamanho && prioridade_efetiva(&processos[heap[filho_direito]]) > prioridade_efetiva(&processos[heap[maior]])) {
+            maior = filho_direito; // O filho direito tem prioridade maior que o processo atual ou o filho esquerdo
+        }
+        if (maior != i) {
+            trocar_indices(&heap[i], &heap[maior]); // Troca o processo atual com o maior dos filhos
+            i = maior; // Move para o índice do maior para continuar descendo na árvore
+        } else {
+            break; // Se o processo atual for maior que ambos os filhos, a propriedade de heap está satisfeita e o loop pode ser interrompido
+        }
+    }
+}
+
+//Função auxiliar para adicionar um processo e ajustar a ordem
+static void inserir_max_heap(int heap[], int *tamanho, int indice_processo, const Processo processos[]) {
+    heap[*tamanho] = indice_processo; // Adiciona o índice do processo ao final do heap
+    (*tamanho)++; // Incrementa o tamanho do heap
+    subir_max_heap(heap, *tamanho - 1, processos); // Ajusta a posição do novo processo para manter a propriedade de heap
+}
+
+//Função para remover e retornar o processo com maior prioridade (o processo no topo do heap), e ajustar a ordem dos processos restantes para manter a propriedade de heap, garantindo que o próximo processo com maior prioridade esteja no topo para a próxima escolha
+static int extrair_max_heap(int heap[], int *tamanho, const Processo processos[]) {
+    if (*tamanho <= 0) {
+        return -1; // Retorna -1 se o heap estiver vazio, indicando que não há processos prontos para execução
+    }
+    int indice_processo = heap[0]; // O processo com maior prioridade está no topo do heap (índice 0)
+    heap[0] = heap[*tamanho - 1]; // Move o último processo do heap para o topo
+    (*tamanho)--; // Decrementa o tamanho do heap
+    descer_max_heap(heap, 0, *tamanho, processos); // Ajusta a posição do processo movido para manter a propriedade de heap
+    return indice_processo; // Retorna o índice do processo com maior prioridade que foi extraído do heap
+}
+/*ESSA PARTE DO CÓDIGO FOI DESATIVADO, DANDO LUGAR AO ALGORITMO DE ESCALONAMENTO POR HEAP, ÁRVORE RUBRO NEGRA
 // Função para escolher um processo usando o algoritmo de prioridade
 // Varre os processos prontos e escolhe o que tiver o MAIOR número de prioridade.
 static int escolher_por_prioridade(const Processo processos[], const int pronto[], int n) {
@@ -75,6 +142,7 @@ static int escolher_por_prioridade(const Processo processos[], const int pronto[
     }
     return escolhido;
 }
+*/
 
 // Função para escolher um processo usando o algoritmo de loteria
 // Sorteia um "bilhete" e percorre a lista até encontrar o processo dono daquele bilhete.
@@ -113,6 +181,7 @@ static int escolher_por_loteria(const Processo processos[], const int pronto[], 
     return -1;
 }
 
+/*ESSA PARTE DO CÓDIGO FOI DESATIVADO, DANDO LUGAR AO ALGORITMO DE ESCALONAMENTO POR HEAP, ÁRVORE RUBRO NEGRA
 // Função para escolher um processo usando o algoritmo CFS (Completely Fair Scheduler)
 // CFS: Escolhe o processo que teve o MENOR tempo virtual de execução (vruntime).
 static int escolher_por_cfs(const Processo processos[], const int pronto[], int n) {
@@ -136,6 +205,7 @@ static int escolher_por_cfs(const Processo processos[], const int pronto[], int 
     }
     return escolhido;
 }
+*/
 
 //// INFRAESTRUTURA DE SIMULAÇÃO ////
 // Funções para manipular a fila de processos no algoritmo de alternância (Round Robin)
@@ -183,6 +253,18 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
     int rr_tamanho = 0;
     int em_fila_rr[MAX_PROCESSOS] = {0};
 
+    // Variáveis para controle da interface gráfica
+    const char* nome_algoritmo = "";
+    if (politica == POLITICA_ALTERNANCIA) nome_algoritmo = "Round Robin";
+    else if (politica == POLITICA_PRIORIDADE) nome_algoritmo = "Prioridade";
+    else if (politica == POLITICA_LOTERIA) nome_algoritmo = "Loteria";
+    else nome_algoritmo = "CFS (Rubro-Negra)";
+
+    //Estrutuas para Prioridade e CFS
+    int max_heap_prioridade[MAX_PROCESSOS] = {0};
+    int heap_p_tamanho = 0;
+    Node* rbtree_cfs = NULL;//Raiz da árvore rubro negra
+
     // Garantir que o quantum seja positivo para evitar loops infinitos
     if (quantum <= 0) {
         quantum = 1;
@@ -211,8 +293,15 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
                 if (politica == POLITICA_ALTERNANCIA) {
                     // Botando no final da fila de alternância, garantindo que ele seja considerado para execução na próxima escolha de processo
                     push_fila_rr(fila_rr, &rr_fim, &rr_tamanho, em_fila_rr, i);
+                } 
+                //1. Direcionando para as estruturas novas de cada algoritmo, para que eles possam ser escolhidos na próxima escolha de processo
+                else if (politica == POLITICA_PRIORIDADE) {
+                    inserir_max_heap(max_heap_prioridade, &heap_p_tamanho, i, processos);
+                } else if (politica == POLITICA_CFS) {
+                    inserir_rbtree(&rbtree_cfs, i, processos[i].vruntime);
+                // Código anterior era somente esse else
                 } else {
-                    // Fica disponível para os outros algoritmos, marcando como pronto para que eles possam ser escolhidos na próxima escolha de processo
+                    // Fica disponível para Loteria, marcando como pronto para que eles possam ser escolhidos na próxima escolha de processo
                     pronto[i] = 1;
                 }
             }
@@ -227,15 +316,20 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
                     // Saiu da fila, vai para a CPU
                     em_fila_rr[em_execucao] = 0;
                 }
+            // Atualização para puxar as novas estruturas de cada algoritmo
             } else if (politica == POLITICA_PRIORIDADE) {
+                /* ESTRUTURA ANTIGA
                 em_execucao = escolher_por_prioridade(processos, pronto, n);
-                if (em_execucao >= 0) pronto[em_execucao] = 0;
+                if (em_execucao >= 0) pronto[em_execucao] = 0;*/
+                em_execucao = extrair_max_heap(max_heap_prioridade, &heap_p_tamanho, processos);
             } else if (politica == POLITICA_LOTERIA) {
                 em_execucao = escolher_por_loteria(processos, pronto, n);
                 if (em_execucao >= 0) pronto[em_execucao] = 0;
             } else {
+                em_execucao = extrair_menor_rbtree(&rbtree_cfs);
+                /* ESTRUTURA ANTIGA 
                 em_execucao = escolher_por_cfs(processos, pronto, n);
-                if (em_execucao >= 0) pronto[em_execucao] = 0;
+                if (em_execucao >= 0) pronto[em_execucao] = 0;*/
             }
             quantum_usado = 0;
         }
@@ -243,9 +337,9 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
         // 3. Se mesmo após o escalonamento ninguém foi escolhido (nenhum processo chegou ainda).
         // Se há um processo em execução, processá-lo por um ciclo de tempo
         if (em_execucao < 0) {
-            //imprime IDLE, indicando que a CPU está ociosa, e avança o tempo para a próxima unidade de tempo, onde pode haver novos processos chegando ou prontos para execução
-            
-            animar_execucao(tempo, -1, processos, n);
+            //imprime IDLE, indicando que a CPU está ociosa, e avança o tempo para a próxima unidade de tempo,
+            // onde pode haver novos processos chegando ou prontos para execução
+            animar_execucao(tempo, -1, processos, n, nome_algoritmo);
             //imprimir_execucao(tempo, -1, processos);
             tempo++;
             continue;// Avança o relógio e pula para o próximo ciclo
@@ -254,7 +348,7 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
         // 4. Execução na CPU (Trabalho sendo feito)
         // Marca que o processo está na CPU para controle de estado, e imprime o estado atual da CPU, mostrando qual processo está rodando e quanto tempo restante ele tem
         processos[em_execucao].na_cpu = 1;
-        animar_execucao(tempo, em_execucao, processos, n);
+        animar_execucao(tempo, em_execucao, processos, n, nome_algoritmo);
         //imprimir_execucao(tempo, em_execucao, processos);
 
         // Fez 1 segundo de trabalho, então diminui o tempo restante do processo em execução e incrementa o quantum usado
@@ -277,6 +371,7 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
                 continue;
             }
 
+            /*CÓDIGO DESATIVADO
             if (politica == POLITICA_ALTERNANCIA) {
                 if (em_fila_rr[i]) {
                     processos[i].tempo_espera++;
@@ -286,6 +381,12 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
                     processos[i].tempo_espera++;
                 }
             }
+        }*/
+
+        //ATUALIZAÇÃO 3. Os processos agora podem estar no array pronto[], na fila_rr, no Max-Heapou na RB-Tree.
+        // A forma mais genérica de contar tempo de espera é simplesmente aumentar se ele nasceu e não está na CPU.
+        // O IF original abaixo funcionava apenas para as estruturas antigas. Simplificamos a contagem geral.
+        processos[i].tempo_espera = processos[i].tempo_espera +  1; // Incrementa o tempo de espera para todos os processos que nasceram e não estão na CPU, independentemente da estrutura de dados usada para gerenciar os processos prontos, garantindo que o tempo de espera seja contabilizado corretamente para todos os processos, mesmo com as novas estruturas de dados implementadas para cada algoritmo de escalonamento
         }
 
         //6. Condições de saída da CPU: Verificar se o processo em execução foi concluído ou se o quantum foi esgotado, para decidir se ele deve ser removido da CPU e, no caso do Round Robin, colocado de volta na fila para esperar sua próxima vez de execução
@@ -301,11 +402,23 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
         } else if (quantum_usado >= quantum) {
             // O processo não terminou, mas atingiu a sua fatia de tempo máxima, então ele deve ser preemptado e colocado de volta na fila (no caso do Round Robin) ou marcado como pronto para os outros algoritmos, para que possa ser escolhido novamente no futuro
             processos[em_execucao].na_cpu = 0;
-
+            /*CÓDIGO DESATIVADO
             if (politica == POLITICA_ALTERNANCIA) {
                 push_fila_rr(fila_rr, &rr_fim, &rr_tamanho, em_fila_rr, em_execucao);
             } else {
                 // Volta para o estado pronto, permitindo que ele seja escolhido novamente pelos algoritmos de Prioridade, Loteria ou CFS, e marcando como pronto para que eles possam ser considerados na próxima escolha de processo
+                pronto[em_execucao] = 1;
+            }*/
+
+            //ATUALIZAÇÃO 4. Reinsere nas estruturas otimizadas
+            if (politica == POLITICA_ALTERNANCIA) {
+                push_fila_rr(fila_rr, &rr_fim, &rr_tamanho, em_fila_rr, em_execucao);
+            } else if (politica == POLITICA_PRIORIDADE) {
+                inserir_max_heap(max_heap_prioridade, &heap_p_tamanho, em_execucao, processos);
+            } else if (politica == POLITICA_CFS) {
+                inserir_rbtree(&rbtree_cfs, em_execucao, processos[em_execucao].vruntime);
+            } else {
+                // Volta para o estado pronto (Loteria)
                 pronto[em_execucao] = 1;
             }
 
@@ -315,6 +428,11 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
         }
         // O ciclo termina, então avança o tempo para a próxima unidade de tempo, onde pode haver novos processos chegando ou prontos para execução, e o processo em execução pode continuar ou ser preemptado dependendo do algoritmo de escalonamento e do quantum
         tempo++;
+    }
+
+    //Libera a memória da Árvore Rubro-Negra para evitar Memory Leak (vazamento de memória)
+    if (politica == POLITICA_CFS) {
+        libertar_rbtree(rbtree_cfs);
     }
 
     // Simulação terminou, então imprime o relatório final com os tempos de criação, conclusão, turnaround e tempo em estado pronto de cada processo, para que o usuário possa analisar o desempenho do algoritmo de escalonamento escolhido

@@ -32,14 +32,15 @@ void mostrar_cabecalho_simulador(const char* nome_algoritmo, int quantum) {
     printf(AZUL "=========================================================\n" RESET);
     printf(" Iniciando: " VERDE "%s" RESET " | Quantum: " AMARELO "%d\n" RESET, nome_algoritmo, quantum);
     printf(AZUL "=========================================================\n\n" RESET);
-    PAUSA(2000); // Pausa de 2 segundos para o professor ler o cabeçalho
+    PAUSA(2000); // Pausa de 2 segundos para ler o cabeçalho
 }
 
 // Esta é a função que vai "pular" na tela. Ela substitui a antiga "imprimir_execucao"
-void animar_execucao(int tempo, int indice_cpu, const Processo processos[], int n) {
+void animar_execucao(int tempo, int indice_cpu, const Processo processos[], int n, const char* nome_algoritmo) {
     limpar_tela();
     
     printf(AZUL "=========================================================\n" RESET);
+    printf(CIANO " ALGORITMO EM AÇÃO: " VERDE "t = %s\n" RESET, nome_algoritmo);
     printf(CIANO " RELOGIO DO SISTEMA: " AMARELO "t = %d\n" RESET, tempo);
     printf(AZUL "=========================================================\n" RESET);
 
@@ -76,7 +77,7 @@ void animar_execucao(int tempo, int indice_cpu, const Processo processos[], int 
 void imprimir_relatorio_colorido(const Processo processos[], int n) {
     limpar_tela();
     printf(VERDE "\n=== SIMULACAO CONCLUIDA COM SUCESSO ===\n\n" RESET);
-    printf(AZUL "PID\tCriacao\tConclusao\tTurnaround\tTempoPronto\n" RESET);
+    printf(AZUL "PID\tCriacao\tConclusao\tTempo de Permanência\tTempoPronto\n" RESET);
     printf("---------------------------------------------------------\n");
 
     for (int i = 0; i < n; i++) {
