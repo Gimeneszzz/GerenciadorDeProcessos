@@ -81,7 +81,6 @@ static void subir_max_heap(int heap[], int i, const Processo processos[]) {
     }
 }
 
-
 //Função auxiliar para fazer o processo descer na árvore do array até a posição correta,
 //garantindo que a propriedade de heap seja mantida, ou seja, que o processo com maior 
 //prioridade esteja sempre no topo da árvore.
@@ -124,6 +123,7 @@ static int extrair_max_heap(int heap[], int *tamanho, const Processo processos[]
     descer_max_heap(heap, 0, *tamanho, processos); // Ajusta a posição do processo movido para manter a propriedade de heap
     return indice_processo; // Retorna o índice do processo com maior prioridade que foi extraído do heap
 }
+
 /*ESSA PARTE DO CÓDIGO FOI DESATIVADO, DANDO LUGAR AO ALGORITMO DE ESCALONAMENTO POR HEAP, ÁRVORE RUBRO NEGRA
 // Função para escolher um processo usando o algoritmo de prioridade
 // Varre os processos prontos e escolhe o que tiver o MAIOR número de prioridade.
@@ -296,6 +296,7 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
                 } 
                 //1. Direcionando para as estruturas novas de cada algoritmo, para que eles possam ser escolhidos na próxima escolha de processo
                 else if (politica == POLITICA_PRIORIDADE) {
+                    //Insere o processo na árvore de prioridade
                     inserir_max_heap(max_heap_prioridade, &heap_p_tamanho, i, processos);
                 } else if (politica == POLITICA_CFS) {
                     inserir_rbtree(&rbtree_cfs, i, processos[i].vruntime);

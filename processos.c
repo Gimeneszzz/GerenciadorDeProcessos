@@ -16,8 +16,10 @@
 // para facilitar a comparação do nome do algoritmo lido do arquivo com os algoritmos suportados
 static int strings_iguais_ignore_case(const char *a, const char *b) {
     while (*a && *b) {// Enquanto ambos os caracteres não forem nulos, compara-os ignorando o caso
-        // Usa tolower para converter ambos os caracteres para minúsculas antes de comparar, garantindo que "Alternancia", "alternancia" e "ALTERNANCIA" sejam considerados iguais
-        // Verifica se os caracteres atuais são diferentes, e se forem, retorna 0 (falso), indicando que as strings não são iguais
+        // Usa tolower para converter ambos os caracteres para minúsculas antes de comparar, 
+        // garantindo que "Alternancia", "alternancia" e "ALTERNANCIA" sejam considerados iguais
+        // Verifica se os caracteres atuais são diferentes, e se forem, retorna 0 (falso),
+        // indicando que as strings não são iguais
         if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) {
             return 0;
         }
@@ -37,6 +39,8 @@ int main(void){
     ///Abrir o arquivo para leitura
     FILE *arquivo = fopen("gerenciador.txt", "r");
     //Buffer para o texto que foi lido no arquivo
+    //Para o nome do algoritmo, que tem um limite de 31 caracteres mais o caractere nulo,
+    //garantindo que não haja estouro de buffer ao ler o nome do algoritmo do arquivo
     char algoritmo[32];
     //Variável para guardar a fatia de tempo 
     int quantum = 0;
@@ -51,22 +55,35 @@ int main(void){
     }
 
     //Ler a primeira linha do arquivo
+    //Verifica arquivo e se tem o formato esperado, algoritmo e quantum separados por "|"
+    //garantindo que o programa só continue se o cabeçalho do arquivo estiver no formato correto, 
+    //se for diferente de 2, indica que o formato do cabeçalho é inválido, 
+    //e o programa exibe uma mensagem de erro e termina a execução para evitar comportamentos 
+    //inesperados devido a um formato de arquivo incorreto
     if (fscanf(arquivo, " %31[^|]|%d", algoritmo, &quantum) != 2) {
-    printf("Cabeçalho inválido.\n");
-    fclose(arquivo);
-    return 1;
-}
+        printf("Cabeçalho inválido.\n");
+        fclose(arquivo);
+        return 1;
+    }
 
     //Ler os processos
+    //Enquanto o número de processos lidos for menor que o máximo permitido 
+    //e a leitura do arquivo for como esperado(tempo de criação, PID, tempo total de execução e prioridade) == 4,
+    //o programa continua lendo os processos do arquivo, preenchendo a estrutura
     while (total_processos < MAX_PROCESSOS &&
         fscanf(arquivo, " M%d|P%9[^|]|%d|%d",
                 &processos[total_processos].tempo_criacao,
                 processos[total_processos].pid,
                 &processos[total_processos].tempo_execucao_total,
                 &processos[total_processos].prioridade) == 4) {
+        //Pega o tempo_restante do processo, que inicialmente é igual ao tempo total de execução, 
         processos[total_processos].tempo_restante = processos[total_processos].tempo_execucao_total;
+        //e também inicializa o vruntime, o tempo de espera, 
         processos[total_processos].vruntime = 0.0f;
         processos[total_processos].tempo_espera = 0;
+        //o tempo de conclusão e o estado de na_cpu para cada processo lido do arquivo,
+        //preparando-os para a simulação dos algoritmos de escalonamento,
+        //onde esses campos serão atualizados conforme os processos são executados e preemptados
         processos[total_processos].tempo_conclusao = -1;
         processos[total_processos].na_cpu = 0;
         total_processos++;
@@ -91,7 +108,8 @@ int main(void){
     //printf("Algoritmo: %s | Quantum: %d\n", algoritmo, quantum);
     //printf("Processos carregados: %d\n\n", total_processos);
 
-    // Iniciando a semente para a loteria, garantindo que os resultados sejam diferentes a cada execução do programa, para simular a aleatoriedade dos sorteios de bilhetes no algoritmo de loteria
+    // Iniciando a semente para a loteria, garantindo que os resultados sejam diferentes a cada execução do programa, 
+    //Para simular a aleatoriedade dos sorteios de bilhetes no algoritmo de loteria
     srand((unsigned int)time(NULL));
 
     // Chama o algoritmo correspondente
