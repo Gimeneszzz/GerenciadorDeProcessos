@@ -19,9 +19,10 @@
 #define AMARELO "\x1b[33m"
 #define VERMELHO "\x1b[31m"
 #define CIANO "\x1b[36m"
+#define NEGRITO "\x1b[1m"
 
 // Função multiplataforma para limpar o terminal
-void limpar_tela() {
+void limpar_tela(void) {
     system("cls || clear");
 }
 
@@ -40,7 +41,7 @@ void animar_execucao(int tempo, int indice_cpu, const Processo processos[], int 
     limpar_tela();
     
     printf(AZUL "=========================================================\n" RESET);
-    printf(CIANO " ALGORITMO EM AÇÃO: " VERDE "t = %s\n" RESET, nome_algoritmo);
+    printf(CIANO " ALGORITMO EM AÇÃO: " VERDE "%s\n" RESET, nome_algoritmo);
     printf(CIANO " RELOGIO DO SISTEMA: " AMARELO "t = %d\n" RESET, tempo);
     printf(AZUL "=========================================================\n" RESET);
 
@@ -76,19 +77,19 @@ void animar_execucao(int tempo, int indice_cpu, const Processo processos[], int 
 // Função para imprimir o relatório da memória
 void imprimir_relatorio_memoria(int fifo, int lru, int nfu, int otimo) {
     printf("\n");
-    printf(COR_CIANO COR_NEGRITO "==============================================================\n" COR_RESET);
-    printf(COR_CIANO COR_NEGRITO "||" COR_RESET COR_AMARELO COR_NEGRITO "         RELATÓRIO DE FALHAS DE PÁGINA (PAGE FAULTS)        " COR_CIANO COR_NEGRITO "||\n" COR_RESET);
-    printf(COR_CIANO COR_NEGRITO "==============================================================\n" COR_RESET);
-    
+    printf(CIANO NEGRITO "==============================================================\n" RESET);
+    printf(CIANO NEGRITO "||" RESET AMARELO NEGRITO "         RELATÓRIO DE FALHAS DE PÁGINA (PAGE FAULTS)        " CIANO NEGRITO "||\n" RESET);
+    printf(CIANO NEGRITO "==============================================================\n" RESET);
+
     // Resultados formatados para alinhar os números
-    printf(COR_CIANO "|| " COR_RESET COR_VERDE COR_NEGRITO "-> FIFO: " COR_RESET "%-4d trocas                                     " COR_CIANO "||\n" COR_RESET, fifo);
-    printf(COR_CIANO "|| " COR_RESET COR_VERDE COR_NEGRITO "-> LRU:  " COR_RESET "%-4d trocas                                     " COR_CIANO "||\n" COR_RESET, lru);
-    
+    printf(CIANO "|| " RESET VERDE NEGRITO "-> FIFO: " RESET "%-4d trocas                                     " CIANO "||\n" RESET, fifo);
+    printf(CIANO "|| " RESET VERDE NEGRITO "-> LRU:  " RESET "%-4d trocas                                     " CIANO "||\n" RESET, lru);
+
     // NFU e ÓTIMO em vermelho/amarelo para lembrar o Gustavo de implementar
-    printf(COR_CIANO "|| " COR_RESET COR_VERMELHO "-> NFU:  " COR_RESET "%-4d trocas (a implementar pelo Gustavo)        " COR_CIANO "||\n" COR_RESET, nfu);
-    printf(COR_CIANO "|| " COR_RESET COR_VERMELHO "-> ÓTIMO:" COR_RESET "%-4d trocas (a implementar pelo Gustavo)        " COR_CIANO "||\n" COR_RESET, otimo);
-    
-    printf(COR_CIANO COR_NEGRITO "==============================================================\n" COR_RESET);
+    printf(CIANO "|| " RESET VERMELHO "-> NFU:  " RESET "%-4d trocas (a implementar pelo Gustavo)        " CIANO "||\n" RESET, nfu);
+    printf(CIANO "|| " RESET VERMELHO "-> ÓTIMO:" RESET "%-4d trocas (a implementar pelo Gustavo)        " CIANO "||\n" RESET, otimo);
+
+    printf(CIANO NEGRITO "==============================================================\n" RESET);
     printf("\n");
 }
 

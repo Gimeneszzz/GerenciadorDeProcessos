@@ -57,10 +57,10 @@ int gerenciar_acesso(Processo *P, int pagina_acessada, int politica){
         //Se cheio ele chama a respectiva politica
         if (politica == POLITICA_FIFO) {
             printf("Política FIFO selecionada para o processo %s.\n", P->pid);
-            return simular_fifo(pagina_acessada, P);
+            return simular_fifo(P, pagina_acessada);
         } else if (politica == POLITICA_LRU) {
             printf("Política LRU selecionada para o processo %s.\n", P->pid);
-            return simular_lru(pagina_acessada, P);
+            return simular_lru(P, pagina_acessada);
         }
 
     //Terceiro passo: memória livre, adiciona na pagina    
@@ -78,7 +78,7 @@ int gerenciar_acesso(Processo *P, int pagina_acessada, int politica){
     return 0;
 } 
 // Função FIFO: usa o ponteiro circular da struct
-int simular_fifo(int pagina_acessada, Processo *P) {
+int simular_fifo(Processo *P, int pagina_acessada) {
     printf("Memória cheia (FIFO). Substituindo página %d por %d.\n", P->paginas[P->ponteiro_fifo], pagina_acessada);
     
     P->paginas[P->ponteiro_fifo] = pagina_acessada;
@@ -88,7 +88,7 @@ int simular_fifo(int pagina_acessada, Processo *P) {
 }
 
 // Função LRU: procura a página com menor timestamp
-int simular_lru(int pagina_acessada, Processo *P) {
+int simular_lru(Processo *P, int pagina_acessada) {
     int indice_mais_antigo = 0;
     int menor_tempo = P->tempo_carregamento[0];
 
