@@ -44,6 +44,14 @@ int main(void){
     char algoritmo[32];
     //Variável para guardar a fatia de tempo 
     int quantum = 0;
+
+    //Variável para o nome da política de memória
+    char politica_memoria[16];
+    //Variável para os algortimos de memória, que serão lidos do arquivo e comparados com os algoritmos suportados
+    int tamanho_memoria = 0;
+    int tamanho_paginas = 0;
+    int percentual_alocacao = 0;
+
     //Linha dos processos
     Processo processos[MAX_PROCESSOS];
     int total_processos = 0;
@@ -55,6 +63,7 @@ int main(void){
     }
 
     //Ler a primeira linha do arquivo
+    /*VERIFICAÇÃO DO ARQUIVO ANTIGO
     //Verifica arquivo e se tem o formato esperado, algoritmo e quantum separados por "|"
     //garantindo que o programa só continue se o cabeçalho do arquivo estiver no formato correto, 
     //se for diferente de 2, indica que o formato do cabeçalho é inválido, 
@@ -64,9 +73,18 @@ int main(void){
         printf("Cabeçalho inválido.\n");
         fclose(arquivo);
         return 1;
+    }*/
+    //Nova verificação
+    if (fscanf(arquivo, " %31[^|]|%d|%15[^|]|%d|%d|%d", 
+               algoritmo, &quantum, politica_memoria, 
+               &tamanho_memoria, &tamanho_paginas, &percentual_alocacao) != 6) {
+        printf("Cabeçalho inválido.\n");
+        fclose(arquivo);
+        return 1;
     }
 
     //Ler os processos
+    /*LEITURA NO FORMATO ANTIGO
     //Enquanto o número de processos lidos for menor que o máximo permitido 
     //e a leitura do arquivo for como esperado(tempo de criação, PID, tempo total de execução e prioridade) == 4,
     //o programa continua lendo os processos do arquivo, preenchendo a estrutura
@@ -86,6 +104,62 @@ int main(void){
         //onde esses campos serão atualizados conforme os processos são executados e preemptados
         processos[total_processos].tempo_conclusao = -1;
         processos[total_processos].na_cpu = 0;
+        // INICIALIZAÇÃO DA MEMÓRIA
+        processos[total_processos].n_paginas_ocupadas = 0; // Começa sem nada na memória
+        processos[total_processos].ponteiro_fifo = 0;      // Começa apontando para a primeira moldura
+       // Laço para iniciar as páginas e tempos de carregamento do processo,
+       // definindo as páginas como -1 para indicar que estão vazias,
+        for (int i = 0; i < MAX_MOLDURAS; i++) {
+            processos[total_processos].paginas[i] = -1;           // -1 significa slot vazio
+            processos[total_processos].tempo_carregamento[i] = 0; // Inicia tempo zerado
+        }
+
+        total_processos++;
+    }*/
+    //Leitua no formato novo
+    while (total_processos < MAX_PROCESSOS &&
+           fscanf(arquivo, " %d|%9[^|]|%d|%d|%d|",
+                  &processos[total_processos].tempo_criacao,
+                  processos[total_processos].pid,
+                  &processos[total_processos].tempo_execucao_total,
+                  &processos[total_processos].prioridade,
+                  &processos[total_processos].qtde_memoria) == 5) {
+        
+        // Inicializações antigas do escalonamento
+        processos[total_processos].tempo_restante = processos[total_processos].tempo_execucao_total;
+        processos[total_processos].vruntime = 0.0f;
+        processos[total_processos].tempo_espera = 0;
+        processos[total_processos].tempo_conclusao = -1;
+        processos[total_processos].na_cpu = 0;
+        
+        // Inicializações novas de controle da sequência
+        processos[total_processos].total_acessos_sequencia = 0;
+        processos[total_processos].acesso_atual = 0; // Vai começar lendo o índice 0
+
+        // Inicialização da memória física do processo
+        processos[total_processos].n_paginas_ocupadas = 0; 
+        processos[total_processos].ponteiro_fifo = 0;      
+        for (int i = 0; i < MAX_MOLDURAS; i++) {
+            processos[total_processos].paginas[i] = -1;           
+            processos[total_processos].tempo_carregamento[i] = 0; 
+        }
+
+        // Lê o restante da linha (os números com espaço) até a quebra de linha
+        char linha_acessos[2048];
+        if (fgets(linha_acessos, sizeof(linha_acessos), arquivo) != NULL) {
+            // O strtok quebra a string toda vez que encontra um espaço ou quebra de linha
+            char *token = strtok(linha_acessos, " \r\n");
+            
+            // Enquanto houver números na linha, converte (atoi) e guarda no array
+            while (token != NULL && processos[total_processos].total_acessos_sequencia < MAX_ACESSOS) {
+                int index = processos[total_processos].total_acessos_sequencia;
+                processos[total_processos].sequencia_acessos[index] = atoi(token);
+                processos[total_processos].total_acessos_sequencia++;
+                
+                token = strtok(NULL, " \r\n"); // Pega o próximo número
+            }
+        }
+
         total_processos++;
     }
 

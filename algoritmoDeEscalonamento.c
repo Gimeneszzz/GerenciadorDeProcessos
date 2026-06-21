@@ -4,6 +4,7 @@
 #include <float.h>
 #include "interface.h"
 #include "rbtree.h"
+#include "memoria.h"
 
 // Lista de apelidos que representam números inteiros
 // Ao invés de usar números soltos, usa-se nomes descritivos para cada política de escalonamento, facilitando a leitura e manutenção do código
@@ -242,6 +243,12 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
     int em_execucao = -1; // -1 = CPU ociosa, ou seja, sem processos em execução
     int quantum_usado = 0;
 
+    //NOVAS VARIÁVEIS PARA A SIMULAÇÃO DE MEMÓRIA
+    int total_trocas_fifo = 0;
+    int total_trocas_lru = 0;
+    int total_trocas_nfu = 0;
+    int total_trocas_otimo = 0;
+
     // Vetor de booleanos para indicar quais 
     //processos estão prontos para execução para Loteria, Prioridade e CFS
     int pronto[MAX_PROCESSOS] = {0};
@@ -352,8 +359,60 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
         animar_execucao(tempo, em_execucao, processos, n, nome_algoritmo);
         //imprimir_execucao(tempo, em_execucao, processos);
 
+        //LÓGICA DE ACESSO À MEMÓRIA
+        Processo *p = &processos[em_execucao];
+        // Verifica se o processo ainda tem páginas para acessar na sua lista
+        if (p->acesso_atual < p->total_acessos_sequencia) {
+            //Pega a página que o processo está tentando acessar neste ciclo de CPU, com base na sua sequência de acessos e no índice atual de acesso
+            int pagina_pedida = p->sequencia_acessos[p->acesso_atual];
+            
+            //Simulação para o FIFO (aqui usamos o enum do memoria.h)
+            int houve_troca = gerenciar_acesso(p, pagina_pedida, POLITICA_FIFO);
+            
+            if (houve_troca == 1) {
+                total_trocas_fifo++;
+            }
+            
+            //Avança o índice para o próximo ciclo de CPU pedir a próxima página
+            p->acesso_atual++;
+        }
+        // CONTABILIZAÇÃO DO TEMPO DE CPU
+        p->tempo_restante--; //O processo gasta 1 unidade de tempo da CPU (Apenas UMA vez)
+        quantum_usado++;//Usou 1 segundo da fatia de tempo (Apenas UMA vez)
+
+        // Matemática do CFS: Processos com maior prioridade ganham menos vruntime
+        if (politica == POLITICA_CFS) {
+            processos[em_execucao].vruntime += 1.0f / prioridade_efetiva(&processos[em_execucao]);
+        }
+
+        /*ATUALIZADO PARA GERENCIAMENTO DE MEMÓRIA
         // Fez 1 segundo de trabalho, então diminui o tempo restante do processo em execução e incrementa o quantum usado
         processos[em_execucao].tempo_restante--;
+
+        //Verificação de acesso à memória para o processo em execução,
+        if (em_execucao != -1) { // Garante que há alguém na CPU
+            Processo *p = &processos[em_execucao];
+
+            //LÓGICA DE ACESSO À MEMÓRIA
+            // Verifica se o processo ainda tem páginas para acessar na sua lista
+            if (p->acesso_atual < p->total_acessos_sequencia) {
+                
+                int pagina_pedida = p->sequencia_acessos[p->acesso_atual];
+                
+                // Vamos simular para o FIFO (depois você pode trocar ou rodar para o LRU)
+                // O 0 ou 1 retornado indica se houve troca de página (Page Fault)
+                int houve_troca = gerenciar_acesso(p, pagina_pedida, POLITICA_FIFO);
+                
+                if (houve_troca == 1) {
+                    total_trocas_fifo++;
+                }
+                
+                // Avança o índice para que no próximo ciclo de CPU ele peça a próxima página
+                p->acesso_atual++;
+            }
+            p->tempo_restante--; // O processo gasta 1 unidade de tempo da CPU
+            quantum_usado++;
+
         // Usou 1 segundo da fatia de tempo, então incrementa o quantum usado para controle de quando o processo deve ser preemptado (no case do Round Robin) ou para atualizar o vruntime no CFS
         quantum_usado++;
 
@@ -361,7 +420,7 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
         // No algoritmo CFS, o vruntime é atualizado com base na prioridade efetiva do processo
         if (politica == POLITICA_CFS) {
             processos[em_execucao].vruntime += 1.0f / prioridade_efetiva(&processos[em_execucao]);
-        }
+        }*/
 
         //5. Atualizar o tempo de espera dos processos prontos, garantindo que apenas os processos 
         //que estão prontos e não em execução tenham seu tempo de espera incrementado, para refletir o tempo que eles passaram esperando na fila para serem executados
@@ -435,7 +494,8 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
     if (politica == POLITICA_CFS) {
         libertar_rbtree(rbtree_cfs);
     }
-
+    //Imprimindo relatório da memória
+    imprimir_relatorio_memoria(total_trocas_fifo, total_trocas_lru, total_trocas_nfu, total_trocas_otimo);
     // Simulação terminou, então imprime o relatório final com os tempos de criação, conclusão, turnaround e tempo em estado pronto de cada processo, para que o usuário possa analisar o desempenho do algoritmo de escalonamento escolhido
     //imprimir_relatorio_final(processos, n);
     imprimir_relatorio_colorido(processos, n);

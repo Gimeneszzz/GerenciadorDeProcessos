@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include "memoria.h"
 /*Letittja
 FIFO: Gerencie uma fila simples ou apenas um índice circular que aponta para a 
 próxima moldura a ser substituída.
@@ -16,3 +18,92 @@ NFU: Deve manter um contador de acessos para cada página presente na memória.
  DESENVOLVER O simular_nfu e simular_otimo*/
 
 /*ATENÇÃO!!! Implementar as funções apenas com um return 0;*/
+
+//Declarando as funções como int para não fazer overhead(excesso de peso)
+//Usar struct nesse caso é desnecessário, já que só precisamos saber se houve ou não troca
+
+//Variável declarada como global e static para saber qual o tempo global da simulação,
+//para atualizar os tempos de carregamento das páginas
+//RELÓGIO GLOBAL PARA A SIMULAÇÃO DE LRU
+static int tempo_global = 0;
+
+int gerenciar_acesso(Processo *P, int pagina_acessada, int politica){
+    //Incrementando o tempo global a cada acesso para o LRU
+    tempo_global++; 
+
+    //Primeira passo: Verificar se está na memória
+    //percorrendo o array de páginas do processo
+    for (int i = 0; i < P -> n_paginas_ocupadas; i++) {
+        printf("Verificando página %d do processo %s (tempo de carregamento: %d).\n", P->paginas[i], P->pid, P->tempo_carregamento[i]);
+        //Verificando se a página está na memória
+        if (P -> paginas[i] == pagina_acessada) {
+            //Se estiver na memória, atualiza o tempo de carregamento da página acessada
+            printf("Página %d já está na memória do processo %s.\n", pagina_acessada, P->pid);
+            if (politica == POLITICA_LRU) { 
+                P->tempo_carregamento[i] = tempo_global;
+                printf("Política LRU, tempo de carregamento da página %d do processo %s atualizado para %d.\n", pagina_acessada, P -> pid, tempo_global);
+            }
+            //Se for FIFO, não precisa atualizar o tempo de carregamento, pois a ordem é fixa.
+            //Tanto para o FIFO quanto para o LRU, se a página já estiver na memória, 
+            //não há troca, então retorna 0
+            return 0; // Acerto, sem troca
+        }
+    }
+    printf("Página %d não está na memória do processo %s.\n", pagina_acessada, P->pid);
+
+    //Segundo passo: Verificar se está cheio
+    if (P->n_paginas_ocupadas == MAX_MOLDURAS){
+        printf("Memória do processo %s está cheia. Precisamos substituir uma página.\n", P->pid);
+        //Se cheio ele chama a respectiva politica
+        if (politica == POLITICA_FIFO) {
+            printf("Política FIFO selecionada para o processo %s.\n", P->pid);
+            return simular_fifo(pagina_acessada, P);
+        } else if (politica == POLITICA_LRU) {
+            printf("Política LRU selecionada para o processo %s.\n", P->pid);
+            return simular_lru(pagina_acessada, P);
+        }
+
+    //Terceiro passo: memória livre, adiciona na pagina    
+    }else {
+        int pos = P->n_paginas_ocupadas;
+        P->paginas[pos] = pagina_acessada;
+        //Atualiza o tempo de carregamento da página inserida,
+        //que é o tempo global atual para o LRU, enquanto o FIFO é usada para manter a consistência dos dados
+        P -> tempo_carregamento[pos] = tempo_global;
+        P -> n_paginas_ocupadas++;
+        printf("Página %d inserida na memória (espaço livre).\n", pagina_acessada);
+        return 0; // Inserido, sem troca
+    }    
+    
+    return 0;
+} 
+// Função FIFO: usa o ponteiro circular da struct
+int simular_fifo(int pagina_acessada, Processo *P) {
+    printf("Memória cheia (FIFO). Substituindo página %d por %d.\n", P->paginas[P->ponteiro_fifo], pagina_acessada);
+    
+    P->paginas[P->ponteiro_fifo] = pagina_acessada;
+    P->ponteiro_fifo = (P->ponteiro_fifo + 1) % MAX_MOLDURAS;
+    
+    return 1; // Página substituída, houve troca
+}
+
+// Função LRU: procura a página com menor timestamp
+int simular_lru(int pagina_acessada, Processo *P) {
+    int indice_mais_antigo = 0;
+    int menor_tempo = P->tempo_carregamento[0];
+
+    // Procura a página que não é usada há mais tempo
+    for (int i = 1; i < MAX_MOLDURAS; i++) {
+        if (P->tempo_carregamento[i] < menor_tempo) {
+            menor_tempo = P->tempo_carregamento[i];
+            indice_mais_antigo = i;
+        }
+    }
+
+    printf("Memória cheia (LRU). Substituindo página %d (antiga) por %d.\n", P->paginas[indice_mais_antigo], pagina_acessada);
+    
+    P->paginas[indice_mais_antigo] = pagina_acessada;
+    P->tempo_carregamento[indice_mais_antigo] = tempo_global;
+    
+    return 1; // Página substituída, houve troca
+}

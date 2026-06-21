@@ -73,6 +73,25 @@ void animar_execucao(int tempo, int indice_cpu, const Processo processos[], int 
     PAUSA(500); 
 }
 
+// Função para imprimir o relatório da memória
+void imprimir_relatorio_memoria(int fifo, int lru, int nfu, int otimo) {
+    printf("\n");
+    printf(COR_CIANO COR_NEGRITO "==============================================================\n" COR_RESET);
+    printf(COR_CIANO COR_NEGRITO "||" COR_RESET COR_AMARELO COR_NEGRITO "         RELATÓRIO DE FALHAS DE PÁGINA (PAGE FAULTS)        " COR_CIANO COR_NEGRITO "||\n" COR_RESET);
+    printf(COR_CIANO COR_NEGRITO "==============================================================\n" COR_RESET);
+    
+    // Resultados formatados para alinhar os números
+    printf(COR_CIANO "|| " COR_RESET COR_VERDE COR_NEGRITO "-> FIFO: " COR_RESET "%-4d trocas                                     " COR_CIANO "||\n" COR_RESET, fifo);
+    printf(COR_CIANO "|| " COR_RESET COR_VERDE COR_NEGRITO "-> LRU:  " COR_RESET "%-4d trocas                                     " COR_CIANO "||\n" COR_RESET, lru);
+    
+    // NFU e ÓTIMO em vermelho/amarelo para lembrar o Gustavo de implementar
+    printf(COR_CIANO "|| " COR_RESET COR_VERMELHO "-> NFU:  " COR_RESET "%-4d trocas (a implementar pelo Gustavo)        " COR_CIANO "||\n" COR_RESET, nfu);
+    printf(COR_CIANO "|| " COR_RESET COR_VERMELHO "-> ÓTIMO:" COR_RESET "%-4d trocas (a implementar pelo Gustavo)        " COR_CIANO "||\n" COR_RESET, otimo);
+    
+    printf(COR_CIANO COR_NEGRITO "==============================================================\n" COR_RESET);
+    printf("\n");
+}
+
 // Substitui a antiga função que imprimia o relatório final
 void imprimir_relatorio_colorido(const Processo processos[], int n) {
     limpar_tela();
