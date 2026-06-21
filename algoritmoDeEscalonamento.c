@@ -494,11 +494,12 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
     if (politica == POLITICA_CFS) {
         libertar_rbtree(rbtree_cfs);
     }
-    //Imprimindo relatório da memória
-    imprimir_relatorio_memoria(total_trocas_fifo, total_trocas_lru, total_trocas_nfu, total_trocas_otimo);
     // Simulação terminou, então imprime o relatório final com os tempos de criação, conclusão, turnaround e tempo em estado pronto de cada processo, para que o usuário possa analisar o desempenho do algoritmo de escalonamento escolhido
     //imprimir_relatorio_final(processos, n);
     imprimir_relatorio_colorido(processos, n);
+    //Imprimindo relatório da memória
+    imprimir_relatorio_memoria(total_trocas_fifo, total_trocas_lru, total_trocas_nfu, total_trocas_otimo);
+
 }
 
 //// FUNÇÕES DE INTERFACE PARA CADA ALGORITMO DE ESCALONAMENTO ////
