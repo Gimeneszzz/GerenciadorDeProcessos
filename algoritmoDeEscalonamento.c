@@ -356,9 +356,37 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
         // 4. Execução na CPU (Trabalho sendo feito)
         // Marca que o processo está na CPU para controle de estado, e imprime o estado atual da CPU, mostrando qual processo está rodando e quanto tempo restante ele tem
         processos[em_execucao].na_cpu = 1;
-        animar_execucao(tempo, em_execucao, processos, n, nome_algoritmo);
-        //imprimir_execucao(tempo, em_execucao, processos);
+        //ADIÇÃO DE ANIMAÇÃO PARA A INTERFACE DA MEMÓRIA
+        Processo *p = &processos[em_execucao];
+        p->ultima_pagina_pedida = -1; 
+        p->sofreu_page_fault = 0;
 
+        // LÓGICA DE ACESSO À MEMÓRIA (Acessa primeiro)
+        if (p->acesso_atual < p->total_acessos_sequencia) {
+            int pagina_pedida = p->sequencia_acessos[p->acesso_atual];
+            p->ultima_pagina_pedida = pagina_pedida; 
+            
+            // Simulação para o FIFO
+            int houve_troca = gerenciar_acesso(p, pagina_pedida, POLITICA_FIFO);
+            
+            if (houve_troca == 1) {
+                total_trocas_fifo++;
+                p->sofreu_page_fault = 1; // Avisa a interface que ocorreu uma troca
+            }
+            p->acesso_atual++;
+        }
+        //Anima a execução com os dados do acesso recém feito
+        animar_execucao(tempo, em_execucao, processos, n, nome_algoritmo);
+
+        // CONTABILIZAÇÃO DO TEMPO DE CPU
+        p->tempo_restante--; 
+        quantum_usado++;
+
+        // Matemática do CFS
+        if (politica == POLITICA_CFS) {
+            processos[em_execucao].vruntime += 1.0f / prioridade_efetiva(&processos[em_execucao]);
+        }
+        /*LÓGICA ANTIGA DE ACESSO À MEMÓRIA, ANTES DA ANIMAÇÃO DA MEMÓRIA
         //LÓGICA DE ACESSO À MEMÓRIA
         Processo *p = &processos[em_execucao];
         // Verifica se o processo ainda tem páginas para acessar na sua lista
@@ -383,7 +411,7 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
         // Matemática do CFS: Processos com maior prioridade ganham menos vruntime
         if (politica == POLITICA_CFS) {
             processos[em_execucao].vruntime += 1.0f / prioridade_efetiva(&processos[em_execucao]);
-        }
+        }*/
 
         /*ATUALIZADO PARA GERENCIAMENTO DE MEMÓRIA
         // Fez 1 segundo de trabalho, então diminui o tempo restante do processo em execução e incrementa o quantum usado
