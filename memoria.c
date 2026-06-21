@@ -34,14 +34,11 @@ int gerenciar_acesso(Processo *P, int pagina_acessada, int politica){
     //Primeira passo: Verificar se está na memória
     //percorrendo o array de páginas do processo
     for (int i = 0; i < P -> n_paginas_ocupadas; i++) {
-        printf("Verificando página %d do processo %s (tempo de carregamento: %d).\n", P->paginas[i], P->pid, P->tempo_carregamento[i]);
         //Verificando se a página está na memória
         if (P -> paginas[i] == pagina_acessada) {
             //Se estiver na memória, atualiza o tempo de carregamento da página acessada
-            printf("Página %d já está na memória do processo %s.\n", pagina_acessada, P->pid);
             if (politica == POLITICA_LRU) { 
                 P->tempo_carregamento[i] = tempo_global;
-                printf("Política LRU, tempo de carregamento da página %d do processo %s atualizado para %d.\n", pagina_acessada, P -> pid, tempo_global);
             }
             //Se for FIFO, não precisa atualizar o tempo de carregamento, pois a ordem é fixa.
             //Tanto para o FIFO quanto para o LRU, se a página já estiver na memória, 
@@ -49,17 +46,13 @@ int gerenciar_acesso(Processo *P, int pagina_acessada, int politica){
             return 0; // Acerto, sem troca
         }
     }
-    printf("Página %d não está na memória do processo %s.\n", pagina_acessada, P->pid);
 
     //Segundo passo: Verificar se está cheio
     if (P->n_paginas_ocupadas == MAX_MOLDURAS){
-        printf("Memória do processo %s está cheia. Precisamos substituir uma página.\n", P->pid);
         //Se cheio ele chama a respectiva politica
         if (politica == POLITICA_FIFO) {
-            printf("Política FIFO selecionada para o processo %s.\n", P->pid);
             return simular_fifo(P, pagina_acessada);
         } else if (politica == POLITICA_LRU) {
-            printf("Política LRU selecionada para o processo %s.\n", P->pid);
             return simular_lru(P, pagina_acessada);
         }
 
@@ -71,16 +64,13 @@ int gerenciar_acesso(Processo *P, int pagina_acessada, int politica){
         //que é o tempo global atual para o LRU, enquanto o FIFO é usada para manter a consistência dos dados
         P -> tempo_carregamento[pos] = tempo_global;
         P -> n_paginas_ocupadas++;
-        printf("Página %d inserida na memória (espaço livre).\n", pagina_acessada);
         return 0; // Inserido, sem troca
     }    
     
     return 0;
 } 
 // Função FIFO: usa o ponteiro circular da struct
-int simular_fifo(Processo *P, int pagina_acessada) {
-    printf("Memória cheia (FIFO). Substituindo página %d por %d.\n", P->paginas[P->ponteiro_fifo], pagina_acessada);
-    
+int simular_fifo(Processo *P, int pagina_acessada) {    
     P->paginas[P->ponteiro_fifo] = pagina_acessada;
     P->ponteiro_fifo = (P->ponteiro_fifo + 1) % MAX_MOLDURAS;
     
@@ -99,8 +89,6 @@ int simular_lru(Processo *P, int pagina_acessada) {
             indice_mais_antigo = i;
         }
     }
-
-    printf("Memória cheia (LRU). Substituindo página %d (antiga) por %d.\n", P->paginas[indice_mais_antigo], pagina_acessada);
     
     P->paginas[indice_mais_antigo] = pagina_acessada;
     P->tempo_carregamento[indice_mais_antigo] = tempo_global;
