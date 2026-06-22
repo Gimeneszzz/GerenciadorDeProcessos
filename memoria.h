@@ -25,11 +25,11 @@ typedef struct {
 // Protótipos das funções de simulação
 // Lógica alterada para receber o processo e a página acessada, e retornar se houve troca ou não
 //Protótipo principal para todos os algoritmos
-int gerenciar_acesso(Processo *P, int pagina_acessada, int politica);
+int gerenciar_acesso(Processo *P,int pagina_acessada,int politica,int* sequencia_futura,int tamanho_futuro);
 // Cada algoritmo acessará p->paginas, p->tempo_carregamento e outros campos conforme necessário
 int simular_fifo(Processo *p, int pagina_acessada);
 int simular_lru(Processo *p, int pagina_acessada);
 int simular_nfu(Processo *p, int pagina_acessada);
-int simular_otimo(Processo *p, int pagina_acessada, int* sequencia_futura);
+int simular_otimo(Processo *p,int pagina_acessada,int* sequencia_futura,int tamanho_futuro);
 
 #endif
