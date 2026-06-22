@@ -1,12 +1,4 @@
-# Simulador de Escalonamento de Processos (Sistemas Operacionais)
 
-Este projeto implementa um simulador de escalonamento de processos preemptivo em C, desenvolvido como requisito para a disciplina de Sistemas Operacionais. O simulador lê uma lista de processos a partir de um arquivo de texto e simula a sua execução na CPU utilizando quatro algoritmos diferentes.
-
-## Integrantes do Grupo
-* [Lara Letittja Sague Lopez Guardiola Velloso/150886]
-* [Gustavo do Amaral Gimenes/155468]
-
-## Algoritmos Implementados
 1. **Alternância Circular (Round Robin)**
 2. **Prioridade**
 3. **Loteria**

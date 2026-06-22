@@ -118,13 +118,25 @@ int main(void){
     }*/
     //Leitua no formato novo
     while (total_processos < MAX_PROCESSOS &&
-           fscanf(arquivo, " %d|%9[^|]|%d|%d|%d|",
+           fscanf(arquivo, " %d|%9[^|]|%d|%d|%d| ", 
                   &processos[total_processos].tempo_criacao,
                   processos[total_processos].pid,
                   &processos[total_processos].tempo_execucao_total,
                   &processos[total_processos].prioridade,
                   &processos[total_processos].qtde_memoria) == 5) {
         
+        //CÁLCULO DO LIMITE DE MOLDURAS
+        //Descobre quantas páginas o processo precisa (arredondando pra cima)
+        int paginas_virtuais = processos[total_processos].qtde_memoria / tamanho_paginas;
+        if (processos[total_processos].qtde_memoria % tamanho_paginas != 0) {
+            paginas_virtuais++;
+        }
+        //Calcula quantas molduras ele tem direito na RAM
+        processos[total_processos].limite_molduras = (paginas_virtuais * percentual_alocacao) / 100;
+        //Garante que ele tenha pelo menos 1 moldura para não travar o sistema
+        if (processos[total_processos].limite_molduras < 1) {
+            processos[total_processos].limite_molduras = 1;
+        }
         // Inicializações antigas do escalonamento
         processos[total_processos].tempo_restante = processos[total_processos].tempo_execucao_total;
         processos[total_processos].vruntime = 0.0f;
@@ -142,6 +154,7 @@ int main(void){
         for (int i = 0; i < MAX_MOLDURAS; i++) {
             processos[total_processos].paginas[i] = -1;           
             processos[total_processos].tempo_carregamento[i] = 0; 
+            processos[total_processos].contador_nfu[i] = 0; // Inicializa contador NFU
         }
 
         // Lê o restante da linha (os números com espaço) até a quebra de linha

@@ -2,7 +2,8 @@
 #define PROCESSOS_H
 
 #define MAX_PROCESSOS 100
-#define MAX_MOLDURAS 10
+//Tamanho seguro para arrays
+#define MAX_MOLDURAS 50
 #define MAX_ACESSOS 1000
 
 typedef struct {
@@ -17,12 +18,14 @@ typedef struct {
     int na_cpu;
     //Campos para os arquivos de entrada
     int qtde_memoria; // Quantidade de de memória exigida pelo processo
+    int limite_molduras; // Quantidade de molduras que o processo pode usar calculado
     int sequencia_acessos[MAX_ACESSOS]; // Array que guarda: 1, 2, 3, 3, 4, 5...
     int total_acessos_sequencia;// Tamanho da sequência lida do arquivo
     int acesso_atual;// Índice de qual página o processo vai pedir agora
     //Campos para a memória física(Molduras)
     int paginas[MAX_MOLDURAS]; // páginas que o processo acessa
     int tempo_carregamento[MAX_MOLDURAS]; // Necessário para FIFO e LRU
+    int contador_nfu[MAX_MOLDURAS];
     int ponteiro_fifo; // Índice circular para o FIFO
     int n_paginas_ocupadas; // Quantas molduras estão em uso
     //Campos novos para a animação

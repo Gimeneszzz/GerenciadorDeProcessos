@@ -208,6 +208,39 @@ static int escolher_por_cfs(const Processo processos[], const int pronto[], int 
 }
 */
 
+// Função que calcula o número de trocas reais criando um "clone" da memória 
+// para não interferir na simulação da CPU
+static int calcular_trocas_isoladas(const Processo processos[], int n, int politica) {
+    int total_trocas = 0;
+    
+    for (int i = 0; i < n; i++) {
+        // Copia todo o estado do processo (incluindo o limite_molduras calculado)
+        Processo clone = processos[i]; 
+        
+        // Zera a "RAM" do clone para a simulação ser justa
+        clone.n_paginas_ocupadas = 0;
+        clone.ponteiro_fifo = 0;
+        for(int j = 0; j < MAX_MOLDURAS; j++) {
+            clone.paginas[j] = -1;
+            clone.tempo_carregamento[j] = 0;
+            clone.contador_nfu[j] = 0;
+        }
+        
+        // Simula a sequência inteira do processo para este algoritmo específico
+        for (int a = 0; a < clone.total_acessos_sequencia; a++) {
+            int pagina = clone.sequencia_acessos[a];
+            int *futuro = &clone.sequencia_acessos[a + 1];
+            int tam_futuro = clone.total_acessos_sequencia - (a + 1);
+            
+            // Passa o endereço do clone. Se a política pedir troca, contabiliza!
+            if (gerenciar_acesso(&clone, pagina, politica, futuro, tam_futuro) == 1) {
+                total_trocas++;
+            }
+        }
+    }
+    return total_trocas;
+}
+
 //// INFRAESTRUTURA DE SIMULAÇÃO ////
 // Funções para manipular a fila de processos no algoritmo de alternância (Round Robin)
 // Remove o primeiro processo da fila para ele ir para a CPU
@@ -365,6 +398,10 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
         if (p->acesso_atual < p->total_acessos_sequencia) {
             int pagina_pedida = p->sequencia_acessos[p->acesso_atual];
             p->ultima_pagina_pedida = pagina_pedida; 
+
+            // Preparando os dados para qualquer algoritmo de memória (FIFO, LRU, Ótimo)
+            int *futuro = &p->sequencia_acessos[p->acesso_atual + 1];
+            int tamanho_futuro = p->total_acessos_sequencia - (p->acesso_atual + 1);
             
             // Simulação para o FIFO
             int houve_troca = gerenciar_acesso(p, pagina_pedida, POLITICA_FIFO, NULL, 0);
@@ -539,6 +576,14 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
     if (politica == POLITICA_CFS) {
         libertar_rbtree(rbtree_cfs);
     }
+
+    // Agora que a CPU terminou, calculamos a performance real e independente
+    // de cada política de memória.
+    total_trocas_fifo = calcular_trocas_isoladas(processos, n, POLITICA_FIFO);
+    total_trocas_lru = calcular_trocas_isoladas(processos, n, POLITICA_LRU);
+    total_trocas_nfu = calcular_trocas_isoladas(processos, n, POLITICA_NFU);
+    total_trocas_otimo = calcular_trocas_isoladas(processos, n, POLITICA_OTIMO);
+
     // Simulação terminou, então imprime o relatório final com os tempos de criação, conclusão, turnaround e tempo em estado pronto de cada processo, para que o usuário possa analisar o desempenho do algoritmo de escalonamento escolhido
     //imprimir_relatorio_final(processos, n);
     imprimir_relatorio_colorido(processos, n);

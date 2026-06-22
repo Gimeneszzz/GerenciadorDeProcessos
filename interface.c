@@ -78,19 +78,46 @@ void animar_execucao(int tempo, int indice_cpu, const Processo processos[], int 
 void imprimir_relatorio_memoria(int fifo, int lru, int nfu, int otimo) {
     printf("\n");
     printf(CIANO NEGRITO "==============================================================\n" RESET);
-    printf(CIANO NEGRITO "||" RESET AMARELO NEGRITO "         RELATÓRIO DE FALHAS DE PÁGINA (PAGE FAULTS)        " CIANO NEGRITO "||\n" RESET);
+    printf(CIANO NEGRITO "||" RESET AMARELO NEGRITO "        RELATÓRIO DE FALHAS DE PÁGINA (PAGE FAULTS)         " CIANO NEGRITO "||\n" RESET);
     printf(CIANO NEGRITO "==============================================================\n" RESET);
 
     // Resultados formatados para alinhar os números
     printf(CIANO "|| " RESET VERDE NEGRITO "-> FIFO: " RESET "%-4d trocas                                     " CIANO "||\n" RESET, fifo);
     printf(CIANO "|| " RESET VERDE NEGRITO "-> LRU:  " RESET "%-4d trocas                                     " CIANO "||\n" RESET, lru);
-
-    // NFU e ÓTIMO em vermelho/amarelo para lembrar o Gustavo de implementar
-    printf(CIANO "|| " RESET VERMELHO "-> NFU:  " RESET "%-4d trocas (a implementar pelo Gustavo)        " CIANO "||\n" RESET, nfu);
-    printf(CIANO "|| " RESET VERMELHO "-> ÓTIMO:" RESET "%-4d trocas (a implementar pelo Gustavo)        " CIANO "||\n" RESET, otimo);
-
+    printf(CIANO "|| " RESET VERDE NEGRITO "-> NFU:  " RESET "%-4d trocas                                     " CIANO "||\n" RESET, nfu);
+    printf(CIANO "|| " RESET VERDE NEGRITO  "-> ÓTIMO:" RESET "%-4d trocas                                    " CIANO "||\n" RESET, otimo);
     printf(CIANO NEGRITO "==============================================================\n" RESET);
     printf("\n");
+
+    //Lógica para determinar o vencedor (quem chegou mais perto do ótimo) e imprimir a linha final do relatório, seguindo exatamente o formato exigido pelo gabarito
+    int dif_fifo = fifo - otimo;
+    int dif_lru = lru - otimo;
+    int dif_nfu = nfu - otimo;
+    
+    // Encontra qual é a menor diferença (quem chegou mais perto do ótimo)
+    int menor_dif = dif_fifo;
+    if (dif_lru < menor_dif) menor_dif = dif_lru;
+    if (dif_nfu < menor_dif) menor_dif = dif_nfu;
+    
+    // Conta quantos algoritmos empataram na primeira posição
+    int empates = 0;
+    if (dif_fifo == menor_dif) empates++;
+    if (dif_lru == menor_dif) empates++;
+    if (dif_nfu == menor_dif) empates++;
+    
+    // Define a string do vencedor exatamente como o professor pediu
+    const char* vencedor = "";
+    if (empates > 1) {
+        vencedor = "empate"; // Se 2 ou mais empataram no melhor resultado
+    } else if (dif_fifo == menor_dif) {
+        vencedor = "FIFO";
+    } else if (dif_lru == menor_dif) {
+        vencedor = "menos recentemente usada";
+    } else if (dif_nfu == menor_dif) {
+        vencedor = "não usada frequentemente";
+    }
+    // ATENÇÃO: Esta linha imprime o formato cru exigido pelo gabarito
+    printf("%d|%d|%d|%d|%s\n", fifo, lru, nfu, otimo, vencedor);
 }
 
 // Substitui a antiga função que imprimia o relatório final
