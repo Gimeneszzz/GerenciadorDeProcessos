@@ -366,14 +366,31 @@ static void simular(Processo processos[], int n, int quantum, Politica politica)
             //Pega a página que o processo está tentando acessar neste ciclo de CPU, com base na sua sequência de acessos e no índice atual de acesso
             int pagina_pedida = p->sequencia_acessos[p->acesso_atual];
             
-            //Simulação para o FIFO (aqui usamos o enum do memoria.h)
-            int houve_troca = gerenciar_acesso(p, pagina_pedida, POLITICA_FIFO);
-            
-            if (houve_troca == 1) {
+            // Prepara o vetor de acessos futuros para o algoritmo ótimo
+            int *futuro = &p->sequencia_acessos[p->acesso_atual + 1];
+            int tamanho_futuro = p->total_acessos_sequencia - (p->acesso_atual + 1);
+
+            // Simulação FIFO
+            if (gerenciar_acesso(p, pagina_pedida, POLITICA_FIFO, NULL, 0) == 1) {
                 total_trocas_fifo++;
             }
-            
-            //Avança o índice para o próximo ciclo de CPU pedir a próxima página
+
+            // Simulação LRU
+            if (gerenciar_acesso(p, pagina_pedida, POLITICA_LRU, NULL, 0) == 1) {
+                total_trocas_lru++;
+            }
+
+            // Simulação NFU
+            if (gerenciar_acesso(p, pagina_pedida, POLITICA_NFU, NULL, 0) == 1) {
+                total_trocas_nfu++;
+            }
+
+            // Simulação Ótimo
+            if (gerenciar_acesso(p, pagina_pedida, POLITICA_OTIMO, futuro, tamanho_futuro) == 1) {
+                total_trocas_otimo++;
+            }
+
+            // Avança o índice para o próximo ciclo de CPU pedir a próxima página
             p->acesso_atual++;
         }
         // CONTABILIZAÇÃO DO TEMPO DE CPU

@@ -27,7 +27,7 @@ NFU: Deve manter um contador de acessos para cada página presente na memória.
 //RELÓGIO GLOBAL PARA A SIMULAÇÃO DE LRU
 static int tempo_global = 0;
 
-int gerenciar_acesso(Processo *P, int pagina_acessada, int politica){
+int gerenciar_acesso(Processo *P,int pagina_acessada,int politica,int* sequencia_futura,int tamanho_futuro){
     //Incrementando o tempo global a cada acesso para o LRU
     tempo_global++; 
 
@@ -36,18 +36,26 @@ int gerenciar_acesso(Processo *P, int pagina_acessada, int politica){
     for (int i = 0; i < P -> n_paginas_ocupadas; i++) {
         printf("Verificando página %d do processo %s (tempo de carregamento: %d).\n", P->paginas[i], P->pid, P->tempo_carregamento[i]);
         //Verificando se a página está na memória
-        if (P -> paginas[i] == pagina_acessada) {
-            //Se estiver na memória, atualiza o tempo de carregamento da página acessada
-            printf("Página %d já está na memória do processo %s.\n", pagina_acessada, P->pid);
-            if (politica == POLITICA_LRU) { 
-                P->tempo_carregamento[i] = tempo_global;
-                printf("Política LRU, tempo de carregamento da página %d do processo %s atualizado para %d.\n", pagina_acessada, P -> pid, tempo_global);
+            if (P->paginas[i] == pagina_acessada) {
+                printf("Página %d já está na memória do processo %s.\n",
+                    pagina_acessada, P->pid);
+
+                if (politica == POLITICA_LRU) {
+                    P->tempo_carregamento[i] = tempo_global;
+
+                    printf("Política LRU, tempo de carregamento da página %d do processo %s atualizado para %d.\n",
+                        pagina_acessada, P->pid, tempo_global);
+                }
+
+                if (politica == POLITICA_NFU) {
+                    contador_nfu[i]++;
+                }
+
+                //Se for FIFO, não precisa atualizar o tempo de carregamento, pois a ordem é fixa.
+                //Tanto para o FIFO quanto para o LRU, se a página já estiver na memória, 
+                //não há troca, então retorna 0
+                return 0;
             }
-            //Se for FIFO, não precisa atualizar o tempo de carregamento, pois a ordem é fixa.
-            //Tanto para o FIFO quanto para o LRU, se a página já estiver na memória, 
-            //não há troca, então retorna 0
-            return 0; // Acerto, sem troca
-        }
     }
     printf("Página %d não está na memória do processo %s.\n", pagina_acessada, P->pid);
 
@@ -61,6 +69,10 @@ int gerenciar_acesso(Processo *P, int pagina_acessada, int politica){
         } else if (politica == POLITICA_LRU) {
             printf("Política LRU selecionada para o processo %s.\n", P->pid);
             return simular_lru(P, pagina_acessada);
+        } else if (politica == POLITICA_NFU) {
+            return simular_nfu(P, pagina_acessada);
+        } else if (politica == POLITICA_OTIMO) {
+            return simular_otimo(P, pagina_acessada, sequencia_futura, tamanho_futuro);
         }
 
     //Terceiro passo: memória livre, adiciona na pagina    
@@ -106,4 +118,75 @@ int simular_lru(Processo *P, int pagina_acessada) {
     P->tempo_carregamento[indice_mais_antigo] = tempo_global;
     
     return 1; // Página substituída, houve troca
+}
+
+
+// Contador usado pelo NFU para cada posição da memória
+static int contador_nfu[MAX_MOLDURAS] = {0};
+
+int simular_nfu(Processo *P, int pagina_acessada) {
+    int indice_remover = 0;
+
+    // Escolhe a página com menor contador de uso
+    // Em caso de empate, escolhe a página de menor ID
+    for (int i = 1; i < MAX_MOLDURAS; i++) {
+        if (contador_nfu[i] < contador_nfu[indice_remover]) {
+            indice_remover = i;
+        } else if (contador_nfu[i] == contador_nfu[indice_remover] &&
+                   P->paginas[i] < P->paginas[indice_remover]) {
+            indice_remover = i;
+        }
+    }
+
+    printf("Memória cheia (NFU). Substituindo página %d por %d.\n",
+           P->paginas[indice_remover], pagina_acessada);
+
+    P->paginas[indice_remover] = pagina_acessada;
+    contador_nfu[indice_remover] = 1;
+
+    return 1;
+}
+
+int simular_otimo(
+    Processo *P,
+    int pagina_acessada,
+    int* sequencia_futura,
+    int tamanho_futuro
+) {
+    int indice_remover = -1;
+    int maior_distancia = -1;
+
+    for (int i = 0; i < MAX_MOLDURAS; i++) {
+        int distancia = -1;
+
+        for (int j = 0; j < tamanho_futuro; j++) {
+            if (sequencia_futura[j] == P->paginas[i]) {
+                distancia = j;
+                break;
+            }
+        }
+
+        // Se a página não será mais usada, ela é a melhor escolha
+        if (distancia == -1) {
+            indice_remover = i;
+            break;
+        }
+
+        // Caso contrário, remove a que será usada mais tarde
+        if (distancia > maior_distancia) {
+            maior_distancia = distancia;
+            indice_remover = i;
+        }
+    }
+
+    if (indice_remover == -1) {
+        indice_remover = 0;
+    }
+
+    printf("Memória cheia (Ótimo). Substituindo página %d por %d.\n",
+           P->paginas[indice_remover], pagina_acessada);
+
+    P->paginas[indice_remover] = pagina_acessada;
+
+    return 1;
 }
