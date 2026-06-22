@@ -89,3 +89,57 @@ dos membros do grupo.O uso da IA foi concentrado em três frentes principais:
     Como a raiz não tem pai (NULL), o sistema tenta ler a memória de um ponteiro nulo, causando a falha de segmentação.
     A Solução: Adicionei três linhas ao final da sua função de extração garantindo que se (*raiz != NULL) { (*raiz)->cor = PRETO; }.
     Isso blinda a estrutura e resolve definitivamente o erro de memória."
+
+   4. Implementação de Lógica de Alocação Local Dinâmica
+    Utilizamos a IA para traduzir os requisitos teóricos de alocação de memória local (proporcional ao tamanho do processo)
+    em código C eficiente. A IA auxiliou a transformar a lógica de cálculo de paginação em um algoritmo de arredondamento para cima,
+    garantindo que o sistema operacional simulado respeitasse o limite de molduras calculado para cada processo individualmente,
+    prevenindo erros de acesso e estouro de memória.
+
+    PROMPT USADO:
+    "Preciso de uma função em C que calcule o limite de molduras físicas (limite_molduras) para um processo. Recebo o total de 
+    memória exigido pelo processo e o tamanho da página. Devo arredondar o número de páginas necessárias para cima. Após isso, 
+    aplico um percentual de alocação (ex: 50%) fornecido na configuração global. Como garantir que o limite de molduras seja 
+    sempre pelo menos 1?"
+
+    RESPOSTA GERADA:
+    "Para realizar o cálculo dinâmico, utilizei aritmética de ponteiros e manipulação de inteiros para simular o arredondamento
+    (teto). Primeiro, dividi a memória do processo pelo tamanho da página e verifiquei o resto da divisão: se o resto for maior 
+    que zero, somamos 1 ao quociente para garantir a alocação da página incompleta. Para a restrição de pelo menos uma moldura,
+    apliquei uma verificação de 'clamping' (if < 1), garantindo que o sistema nunca trave um processo por falta de espaço mínimo,
+    o que confere robustez à alocação local."
+    
+   5. Otimização do Parser de Arquivos (Leitura de Dados)
+    Para lidar com a complexidade do novo formato de arquivo, a IA ajudou a implementar um parser robusto utilizando strtok e 
+    manipulação de strings. Isso permitiu que o sistema lesse dinamicamente a sequência de acessos a páginas de tamanho variável,
+    transformando uma única linha de texto em um vetor indexável (sequencia_acessos), sem comprometer a estabilidade do sistema
+    através de buffer overflow.
+
+    PROMPT USADO:
+    "Meu simulador precisa ler uma sequência de números inteiros de uma linha de texto em C até encontrar uma quebra de linha.
+    Os números são separados por espaços. Como usar strtok de forma segura para carregar esses números em um array dentro da 
+    struct Processo, respeitando um limite máximo de acessos definido por constante?"
+
+    RESPOSTA GERADA:
+    "A abordagem ideal para processar sequências de tamanho dinâmico é a utilização do strtok em conjunto com um loop while
+    controlado. O strtok ignora os delimitadores e retorna ponteiros para as substrings numéricas; o atoi então converte 
+    cada fragmento para inteiro. Para evitar buffer overflow, incluí uma verificação dupla: uma que checa se o token é 
+    NULL e outra que valida se o índice do array já atingiu o MAX_ACESSOS. Isso torna o parser resiliente, capaz de
+    processar linhas de qualquer tamanho sem corromper a memória da struct Processo."
+
+   6. Estruturação do Relatório de Performance (Script de Correção)
+    A IA foi essencial para formatar a saída de dados do simulador para ser "legível por máquina". Seguindo a especificação 
+    técnica do trabalho, a IA nos ajudou a criar a lógica de cálculo de performance (comparação entre FIFO, LRU, NFU e o 
+    algoritmo Ótimo), garantindo que a saída final fosse uma string formatada exclusivamente por pipes (|), permitindo que 
+    scripts de correção automatizados realizem a validação de forma instantânea e precisa.
+
+    PROMPT USADO: "Crie uma função em C que recebe os contadores de trocas de página do FIFO, LRU, NFU e Ótimo. Ela deve 
+    imprimir uma linha formatada como 'FIFO|LRU|NFU|OTIMO|VENCEDOR'. O 'VENCEDOR' deve ser o algoritmo que teve o menor 
+    número de trocas em comparação ao Ótimo. Se houver dois algoritmos com o mesmo desempenho, a string deve ser 'empate'."
+
+    RESPOSTA GERADA:
+    "Para o cálculo de performance, a estratégia é identificar qual algoritmo teve o menor 'delta' em relação ao Ótimo.
+    Defini uma variável menor_dif inicializada com a diferença do FIFO e comparei sequencialmente com LRU e NFU. 
+    A lógica de desempate utiliza um contador (empates): se a diferença encontrada for igual à menor_dif mais de uma vez, 
+    atribuímos a string 'empate'. O printf final utiliza a formatação estrita | solicitada, garantindo que o script de 
+    correção automática possa ler os dados sem interferência de caracteres indesejados."
