@@ -4,6 +4,7 @@
 #define MAX_PROCESSOS 100
 #define MAX_MOLDURAS 10
 #define MAX_ACESSOS 1000
+
 typedef struct {
     char pid[10];
     int tempo_criacao;
@@ -24,6 +25,9 @@ typedef struct {
     int tempo_carregamento[MAX_MOLDURAS]; // Necessário para FIFO e LRU
     int ponteiro_fifo; // Índice circular para o FIFO
     int n_paginas_ocupadas; // Quantas molduras estão em uso
+    //Campos novos para a animação
+    int ultima_pagina_pedida;
+    int sofreu_page_fault;
 } Processo;
 
 void escalonar_alternancia(Processo processos[], int n, int quantum);
