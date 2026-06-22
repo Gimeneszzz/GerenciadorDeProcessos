@@ -4,7 +4,7 @@ Este projeto implementa um simulador de escalonamento de processos preemptivo em
 
 ## Integrantes do Grupo
 * [Lara Letittja Sague Lopez Guardiola Velloso/150886]
-* [Gustavo Gimenes/Matrícula 2]
+* [Gustavo do Amaral Gimenes/155468]
 
 ## Algoritmos Implementados
 1. **Alternância Circular (Round Robin)**
